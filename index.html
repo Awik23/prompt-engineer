@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prompt Engineer v4</title>
+<title>Prompt Engineer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Space+Mono:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -101,6 +101,16 @@
   .ibtn{display:inline-grid;place-items:center;width:15px;height:15px;margin-left:6px;border:1px solid var(--line);border-radius:50%;font-size:9px;color:var(--mute);cursor:pointer;font-family:var(--mono);vertical-align:middle;line-height:1}
   .ibtn:hover{border-color:var(--acc);color:var(--acc)}
   .ipop{position:absolute;max-width:300px;background:#0d0e0c;border:1px solid var(--acc-dim);border-radius:9px;padding:11px 13px;font-size:12px;line-height:1.5;color:var(--ink);z-index:80;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.66);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:700px;width:100%;max-height:86vh;overflow:auto;padding:28px 30px}
+  .modal h2{font-family:var(--disp);font-weight:900;font-size:28px;margin:0 0 6px}
+  .modal .lead{color:var(--mute);font-size:14px;line-height:1.55;margin:0 0 6px}
+  .modal .faqq{font-weight:700;color:var(--ink);font-size:14.5px;margin-top:18px;display:flex;gap:8px;align-items:baseline}
+  .modal .faqq::before{content:"›";color:var(--acc);font-weight:700}
+  .modal .faqa{color:var(--mute);font-size:13.5px;line-height:1.6;margin-top:4px}
+  .modal .faqa b{color:var(--ink)}
+  .modalclose{float:right;font-family:var(--mono);font-size:12px;background:transparent;border:1px solid var(--line);color:var(--mute);border-radius:8px;padding:7px 12px;cursor:pointer}
+  .modalclose:hover{border-color:var(--acc);color:var(--acc)}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--acc);color:#16180f;font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:11px 20px;border-radius:9px;opacity:0;transition:.25s;pointer-events:none;z-index:50}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -112,6 +122,7 @@
       <h1 id="title">Prompt Engineer <em>workbench</em></h1>
     </div>
     <div class="langrow">
+      <button class="btn btn-ghost" id="faqBtn" style="align-self:center">❓ FAQ</button>
       <div class="langset"><span class="cap" id="uiCap">Rozhraní</span>
         <div class="seg"><button id="uiCS" class="on" onclick="setUI('cs')">CZ</button><button id="uiEN" onclick="setUI('en')">EN</button></div></div>
       <div class="langset"><span class="cap" id="outCap">Jazyk výstupu</span>
@@ -147,6 +158,7 @@
       </div>
       <div class="panel">
         <p class="sechead"><span class="n">4</span> <span id="h4lab">Techniky & omezení</span></p>
+        <label class="fld"><span id="approachLab"></span><div class="chips" id="approach"></div></label>
         <div class="toggles" id="toggles"></div>
         <label class="fld" style="margin-top:13px;margin-bottom:0"><span id="avoidLab"></span><textarea id="avoid" rows="2"></textarea></label>
       </div>
@@ -212,6 +224,7 @@
     </div>
   </div>
 </div>
+<div class="overlay hide" id="faqOverlay"><div class="modal" id="faqModal"></div></div>
 <div class="ipop hide" id="ipop"></div>
 <div class="toast" id="toast"></div>
 
@@ -219,8 +232,8 @@
 /* ====== STATE ====== */
 const S={uiLang:"cs",outLang:"cs",target:"generic",mode:"build",rawText:"",
   task:"",goal:"",ctx:"",aud:"",notes:"",roleIdx:0,roleCustom:"",
-  format:0,tone:0,length:1,avoid:"",
-  tech:{cot:false,ground:false,uncertainty:false,steps:false,example:false,critique:false},
+  format:0,tone:0,length:1,avoid:"",creativity:1,
+  tech:{cot:false,ground:false,uncertainty:false,steps:false,example:false,critique:false,nohall:false},
   vars:{}};
 let HISTORY=[];
 
@@ -237,7 +250,7 @@ const T={
   ctxLab:'Kontext / pozadí <small>volitelné</small>',audLab:'Publikum / pro koho <small>volitelné</small>',
   notesLab:'Poznámka / odkaz na nástroj <small>jen tvá evidence</small>',
   roleCustomLab:"…nebo vlastní role",fmtLab:"Formát výstupu",toneLab:"Tón",lenLab:"Délka / rozsah",
-  avoidLab:'Čemu se vyhnout <small>volitelné</small>',
+  avoidLab:'Čemu se vyhnout <small>volitelné</small>',approachLab:"Přístup / kreativita",
   outTitle:"Hotový prompt",copy:"Kopírovat",save:"＋ Uložit",builder:"← Builder",toast:"Zkopírováno ✓",savedToast:"Uloženo ✓",
   modeBuild:"sestavený",modeRaw:"šablona",
   taskPH:"např. Připrav strategii retail media kampaně na Rohlíku pro dentální značku",
@@ -248,19 +261,22 @@ const T={
   formats:["Strukturované sekce","Odrážky","Tabulka","Číslovaný postup","Souvislý text","Markdown","JSON"],
   tones:["Přímý, věcný","Formální","Neformální","Analytický","Přesvědčivý","Vzdělávací"],
   lengths:["Stručné","Středně podrobné","Vyčerpávající"],
+  approaches:["Faktické","Vyvážené","Kreativní","Brainstorming"],
+  approachSent:{0:"Buď konzervativní a přesný. Drž se faktů a osvědčených postupů, žádné spekulace ani neobvyklé nápady.",1:"",2:"Nabídni i méně obvyklé úhly a originální nápady vedle bezpečných řešení.",3:"Generuj hodně různorodých, i odvážných nápadů — kvantita a rozmanitost před opatrností, filtrovat budu já."},
   tech:[{k:"cot",lab:"Uvažuj krok za krokem",desc:"Rozmysli řešení před odpovědí"},
    {k:"ground",lab:"Drž se faktů / zdrojů",desc:"Žádné vymýšlení, opora ve faktech"},
    {k:"uncertainty",lab:"Přiznej nejistotu",desc:"Když si není jistý, ať to řekne"},
    {k:"steps",lab:"Rozděl na fáze",desc:"Po krocích, ne všechno najednou"},
    {k:"example",lab:"Vlož místo pro příklad",desc:"Slot pro ukázku vstup/výstup"},
-   {k:"critique",lab:"Sebekontrola na konci",desc:"Zhodnoť slabiny a rizika"}],
+   {k:"critique",lab:"Sebekontrola na konci",desc:"Zhodnoť slabiny a rizika"},
+   {k:"nohall",lab:"Nulová tolerance halucinací",desc:"Jen ověřená fakta + zdroje, nic vymyšleného"}],
   H:{ROLE:"ROLE",GOAL:"CÍL",TASK:"ÚKOL",CONTEXT:"KONTEXT",AUDIENCE:"PUBLIKUM",FORMAT:"FORMÁT A STYL",GUIDE:"POKYNY",
      AVOID:"ČEMU SE VYHNI",EXAMPLE:"PŘÍKLAD",TRIGGER:"SPOUŠTĚČ",INPUTS:"VSTUPY A SYSTÉMY",STEPS:"POSTUP",
      RULES:"ROZHODOVACÍ PRAVIDLA",GUARD:"POJISTKY / ESKALACE",OUTPUT:"VÝSTUP — kam jde",TOPIC:"TÉMA",SLIDES:"POČET SLIDŮ",
      VISUAL:"VIZUÁLNÍ STYL",KEY:"KLÍČOVÉ BODY",QUESTION:"OTÁZKA",FOCUS:"ZAMĚŘ SE NA",SOURCES:"PREFERUJ ZDROJE",LANG:"JAZYK ODPOVĚDI",TONE:"TÓN"},
   fmt:{0:"Rozděl odpověď do jasných sekcí s nadpisy.",1:"Odpověz v odrážkách.",2:"Výstup formátuj jako tabulku.",3:"Odpověz jako číslovaný postup.",4:"Souvislý text bez odrážek.",5:"Vrať čistý markdown.",6:"Vrať POUZE validní JSON."},
   len:{0:"Buď stručný — jen podstatné.",1:"Středně podrobně.",2:"Vyčerpávající — i hraniční případy."},
-  techS:{cot:"Než odpovíš, rozmysli si řešení krok za krokem.",steps:"Postupuj po fázích — nech mě po každé fázi reagovat.",ground:"Opírej se o fakta a uváděj zdroje. Nevymýšlej údaje — když nevíš, řekni to.",uncertainty:"Když si nejsi jistý, řekni to explicitně.",critique:"Na závěr přidej sebekontrolu: slabiny, rizika, co může selhat."},
+  techS:{cot:"Než odpovíš, rozmysli si řešení krok za krokem.",steps:"Postupuj po fázích — nech mě po každé fázi reagovat.",ground:"Opírej se o fakta a uváděj zdroje. Nevymýšlej údaje — když nevíš, řekni to.",uncertainty:"Když si nejsi jistý, řekni to explicitně.",critique:"Na závěr přidej sebekontrolu: slabiny, rizika, co může selhat.",nohall:"Uváděj pouze ověřené, reálné informace. Nevymýšlej fakta, čísla, zdroje ani citace. Co nejde ověřit nebo nevíš, výslovně označ jako nejisté. U klíčových tvrzení uveď zdroj."},
   respond:"Odpověz česky.",roleSent:r=>`Jsi ${r}. Odpovídej z této perspektivy a úrovně expertízy.`,goalSent:g=>`Výsledek, kterého chci dosáhnout: ${g}`,audSent:a=>`Výstup je pro: ${a}. Přizpůsob tomu jazyk a hloubku.`,
   defaultTask:"[doplň úkol vlevo nahoře]",emptyMsg:"Začni psát úkol vlevo — prompt se začne skládat tady. Nebo si v záložce Knihovna vyber hotovou šablonu.",
   histEmpty:"Zatím nic uloženého. Naplň prompt a klikni „＋ Uložit“.",confirmDel:"Smazat tento uložený prompt?",renamePrompt:"Nový název:",
@@ -294,7 +310,7 @@ const T={
   ctxLab:'Context / background <small>optional</small>',audLab:'Audience / who is it for <small>optional</small>',
   notesLab:'Note / link to the tool <small>your reference only</small>',
   roleCustomLab:"…or a custom role",fmtLab:"Output format",toneLab:"Tone",lenLab:"Length / depth",
-  avoidLab:'What to avoid <small>optional</small>',
+  avoidLab:'What to avoid <small>optional</small>',approachLab:"Approach / creativity",
   outTitle:"Generated prompt",copy:"Copy",save:"＋ Save",builder:"← Builder",toast:"Copied ✓",savedToast:"Saved ✓",
   modeBuild:"assembled",modeRaw:"template",
   taskPH:"e.g. Build a retail-media campaign strategy on Rohlík for a dental brand",
@@ -305,19 +321,22 @@ const T={
   formats:["Structured sections","Bullets","Table","Numbered steps","Prose","Markdown","JSON"],
   tones:["Direct, plain","Formal","Casual","Analytical","Persuasive","Educational"],
   lengths:["Concise","Moderately detailed","Exhaustive"],
+  approaches:["Factual","Balanced","Creative","Brainstorming"],
+  approachSent:{0:"Be conservative and precise. Stick to facts and proven practices — no speculation or unusual ideas.",1:"",2:"Offer less obvious angles and original ideas alongside safe options.",3:"Generate many diverse, even bold ideas — quantity and variety over caution; I'll filter."},
   tech:[{k:"cot",lab:"Think step by step",desc:"Reason before answering"},
    {k:"ground",lab:"Stick to facts / sources",desc:"No invention, ground in facts"},
    {k:"uncertainty",lab:"Admit uncertainty",desc:"Say so when unsure"},
    {k:"steps",lab:"Break into phases",desc:"Step by step, not all at once"},
    {k:"example",lab:"Add an example slot",desc:"Slot for input/output sample"},
-   {k:"critique",lab:"Self-check at the end",desc:"Assess weaknesses and risks"}],
+   {k:"critique",lab:"Self-check at the end",desc:"Assess weaknesses and risks"},
+   {k:"nohall",lab:"Zero hallucination",desc:"Only verified facts + sources, nothing invented"}],
   H:{ROLE:"ROLE",GOAL:"GOAL",TASK:"TASK",CONTEXT:"CONTEXT",AUDIENCE:"AUDIENCE",FORMAT:"FORMAT & STYLE",GUIDE:"GUIDELINES",
      AVOID:"AVOID",EXAMPLE:"EXAMPLE",TRIGGER:"TRIGGER",INPUTS:"INPUTS & SYSTEMS",STEPS:"PROCESS",RULES:"DECISION RULES",
      GUARD:"GUARDRAILS / ESCALATION",OUTPUT:"OUTPUT — where it goes",TOPIC:"TOPIC",SLIDES:"NUMBER OF SLIDES",
      VISUAL:"VISUAL STYLE",KEY:"KEY POINTS",QUESTION:"QUESTION",FOCUS:"FOCUS ON",SOURCES:"PREFER SOURCES",LANG:"ANSWER LANGUAGE",TONE:"TONE"},
   fmt:{0:"Split into clear sections with headers.",1:"Answer in bullets.",2:"Format as a table.",3:"Answer as numbered steps.",4:"Prose, no bullets.",5:"Return clean markdown.",6:"Return ONLY valid JSON."},
   len:{0:"Be concise — essentials only.",1:"Moderately detailed.",2:"Exhaustive — cover edge cases."},
-  techS:{cot:"Before answering, reason step by step.",steps:"Work in phases — let me react after each phase.",ground:"Ground in facts and cite sources. Don't invent data — if unsure, say so.",uncertainty:"When unsure, say so explicitly.",critique:"At the end add a self-check: weaknesses, risks, what could fail."},
+  techS:{cot:"Before answering, reason step by step.",steps:"Work in phases — let me react after each phase.",ground:"Ground in facts and cite sources. Don't invent data — if unsure, say so.",uncertainty:"When unsure, say so explicitly.",critique:"At the end add a self-check: weaknesses, risks, what could fail.",nohall:"Use only verified, real information. Do not invent facts, numbers, sources or citations. Explicitly flag anything you can't verify or don't know as uncertain. Cite a source for key claims."},
   respond:"Answer in English.",roleSent:r=>`You are ${r}. Respond from this perspective and level of expertise.`,goalSent:g=>`The outcome I want: ${g}`,audSent:a=>`The output is for: ${a}. Adapt language and depth.`,
   defaultTask:"[add the task at top left]",emptyMsg:"Start typing the task on the left — or pick a ready template under the Library tab.",
   histEmpty:"Nothing saved yet. Fill a prompt and click “＋ Save”.",confirmDel:"Delete this saved prompt?",renamePrompt:"New name:",
@@ -369,7 +388,8 @@ const INFO={cs:{
   avoid:"Čeho se má AI vyvarovat — fráze, vymyšlená čísla, konkrétní formát. Konkrétní zákazy fungují líp než obecné.",
   target:"Pro který nástroj prompt děláš. Mění FORMÁT i LIMIT délky. Vestavěné/beta nástroje (Rohlik Ads) mají krátký limit — dlouhé prompty padají.",
   outlang:"Jazyk vygenerovaného promptu — nezávislý na jazyku rozhraní. Můžeš psát vstupy česky a chtít finální prompt anglicky.",
-  vars:"Místa [INSERT …] a {{…}} v promptu. SEM doplň konkrétní hodnoty — datumy, firmy, názvy kampaní. Při kopírování se automaticky dosadí do textu."
+  vars:"Místa [INSERT …] a {{…}} v promptu. SEM doplň konkrétní hodnoty — datumy, firmy, názvy kampaní. Při kopírování se automaticky dosadí do textu.",
+  approach:"Řídí, jak odvážně AI přemýšlí. Faktické = u dat a čísel (Rohlik Ads, Perplexity). Kreativní/Brainstorming = u nápadů a obsahu. Pozor: u datových úkolů kreativita škodí. Pro potlačení halucinací zapni i přepínač „Nulová tolerance halucinací“ — žádná instrukce ale nezaručí nulu halucinací na 100 %, jen je výrazně omezí."
  },en:{
   core:"The base of the prompt. Task is required; goal, context and audience improve it a lot.",
   task:"What exactly the AI should do (verb + object), e.g. “Build a campaign spend table”. Put dates/companies here only if you're NOT using a template with variables — otherwise fill them in the Variables panel below.",
@@ -384,7 +404,8 @@ const INFO={cs:{
   avoid:"What the AI should avoid — phrases, invented numbers, a specific format. Concrete bans work better than vague ones.",
   target:"Which tool the prompt is for. Changes FORMAT and the length LIMIT. Embedded/beta tools (Rohlik Ads) have a short limit — long prompts fail.",
   outlang:"Language of the generated prompt — independent of the interface language. You can type inputs in Czech and want the final prompt in English.",
-  vars:"The [INSERT …] and {{…}} slots in the prompt. Fill the concrete values HERE — dates, companies, campaign names. They're substituted into the text on copy."
+  vars:"The [INSERT …] and {{…}} slots in the prompt. Fill the concrete values HERE — dates, companies, campaign names. They're substituted into the text on copy.",
+  approach:"Controls how boldly the AI thinks. Factual = for data and numbers (Rohlik Ads, Perplexity). Creative/Brainstorming = for ideas and content. Note: creativity hurts on data tasks. To suppress hallucinations also turn on the “Zero hallucination” toggle — but no instruction guarantees zero hallucination, it only strongly reduces them."
  }};
 let ipopKey=null;
 function showPop(key,anchor){const pop=$("ipop");pop.textContent=INFO[S.uiLang][key]||"";
@@ -660,6 +681,51 @@ $("exportBtn").addEventListener("click",()=>{const blob=new Blob([JSON.stringify
 $("importBtn").addEventListener("click",()=>$("fileIn").click());
 $("fileIn").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{try{const arr=JSON.parse(r.result);if(Array.isArray(arr)){const ids=new Set(HISTORY.map(x=>x.id));arr.forEach(x=>{if(!ids.has(x.id))HISTORY.push(x);});persist();}}catch(err){alert(L().importErr);}};r.readAsText(f);e.target.value="";});
+
+/* ====== FAQ ====== */
+const FAQ={
+ cs:`<button class="modalclose" id="faqClose">Zavřít ✕</button>
+  <h2>Co je Prompt Engineer</h2>
+  <p class="lead">Nástroj, který ti pomůže napsat <b>kvalitní, strukturovaný prompt</b>. Vyplníš pole, on z nich složí prompt, ty ho zkopíruješ a vložíš do skutečného AI nástroje (Claude, ChatGPT, Perplexity, Rohlik Ads Assistant…).</p>
+  <div class="faqq">Co to NENÍ</div>
+  <div class="faqa">Není to AI. <b>Nepřemýšlí, neodpovídá, nečte odkazy ani přiložené soubory a nic nikam neodesílá.</b> Jen skládá text. Odpověď ti dá až ten nástroj, kam prompt vložíš.</div>
+  <div class="faqq">Jak ho používat</div>
+  <div class="faqa">1) Nahoře vyber <b>cílový nástroj</b> (mění formát i limit délky). 2) Vlevo vyplň pole — <b>Úkol</b> je povinný, <b>Cíl/Kontext</b> výrazně pomůžou. 3) Vpravo se prompt skládá <b>sám, živě</b>. 4) <b>Kopírovat</b> → vlož do nástroje. U každého pole je <b>ⓘ</b> s vysvětlením.</div>
+  <div class="faqa"><b>Knihovna</b> = hotové šablony (vč. Rohlik Ads). <b>Proměnné</b> = doplň hodnoty do míst [INSERT…] (datumy, firmy, kampaně) — dosadí se při kopírování. <b>Follow-up</b> = hotové věty, které vložíš PO odpovědi nástroje (ověř čísla, zkrať, rozděl na kroky…).</div>
+  <div class="faqq">Jak ho NEpoužívat</div>
+  <div class="faqa">Nečekej, že přečte přiložený dokument nebo odkaz — to umí až cílový nástroj. Negeneruje odpověď, jen prompt. Není to chat.</div>
+  <div class="faqq">Ukládání — důležité</div>
+  <div class="faqa">Uložené prompty a historie jsou <b>jen ve tvém prohlížeči na tomto zařízení</b>. <b>Nesdílí se s ostatními</b> — každý má svoje. Sdílíme <b>nástroj</b>, ne obsah. Chceš prompty přenést nebo zálohovat? Použij <b>Export</b> (a u kolegy <b>Import</b>).</div>
+  <div class="faqq">Délka promptu</div>
+  <div class="faqa">Měřič je <b>vodítko</b>. Vestavěné/beta nástroje (Rohlik Ads) mají krátký limit — moc dlouhé prompty padají na chybu. Když svítí oranžová/červená, použij follow-up <b>„Zkrať“</b> nebo <b>„Rozděl na kroky“</b>.</div>
+  <div class="faqq">Jazyk</div>
+  <div class="faqa">Rozhraní a Jazyk výstupu jsou <b>oddělené</b> — můžeš psát vstupy česky a chtít finální prompt anglicky (nebo naopak).</div>
+  <div class="faqq">Aktualizace & feedback</div>
+  <div class="faqa">Nástroj žije na jedné adrese; když přijde nová verze, <b>aktualizuje se sama</b> (kdyby svítila stará, dej <b>Ctrl+F5</b>). Připomínky a nápady posílej do určeného Teams vlákna.</div>`,
+ en:`<button class="modalclose" id="faqClose">Close ✕</button>
+  <h2>What Prompt Engineer is</h2>
+  <p class="lead">A tool that helps you write a <b>high-quality, structured prompt</b>. You fill in fields, it assembles the prompt, you copy it and paste it into the real AI tool (Claude, ChatGPT, Perplexity, Rohlik Ads Assistant…).</p>
+  <div class="faqq">What it is NOT</div>
+  <div class="faqa">It is not an AI. <b>It doesn't think, answer, read links or attached files, and sends nothing anywhere.</b> It only assembles text. The answer comes from the tool you paste the prompt into.</div>
+  <div class="faqq">How to use it</div>
+  <div class="faqa">1) Pick the <b>target tool</b> at the top (changes format and length limit). 2) Fill the fields on the left — <b>Task</b> is required, <b>Goal/Context</b> help a lot. 3) The prompt assembles <b>live</b> on the right. 4) <b>Copy</b> → paste into the tool. Every field has an <b>ⓘ</b> with an explanation.</div>
+  <div class="faqa"><b>Library</b> = ready templates (incl. Rohlik Ads). <b>Variables</b> = fill the [INSERT…] slots (dates, companies, campaigns) — substituted on copy. <b>Follow-up</b> = ready lines to paste AFTER the tool replies (double-check, shorten, split into steps…).</div>
+  <div class="faqq">How NOT to use it</div>
+  <div class="faqa">Don't expect it to read an attached document or link — only the target tool can. It doesn't generate an answer, only a prompt. It's not a chat.</div>
+  <div class="faqq">Saving — important</div>
+  <div class="faqa">Saved prompts and history live <b>only in your browser on this device</b>. They are <b>not shared</b> — everyone has their own. We share the <b>tool</b>, not the content. To move or back up prompts use <b>Export</b> (and <b>Import</b> on another machine).</div>
+  <div class="faqq">Prompt length</div>
+  <div class="faqa">The meter is a <b>guide</b>. Embedded/beta tools (Rohlik Ads) have a short limit — overly long prompts fail. When it's amber/red, use the <b>“Shorten”</b> or <b>“Split into steps”</b> follow-up.</div>
+  <div class="faqq">Language</div>
+  <div class="faqa">Interface and Output language are <b>separate</b> — you can type inputs in Czech and want the final prompt in English (or vice versa).</div>
+  <div class="faqq">Updates & feedback</div>
+  <div class="faqa">The tool lives at one address; when a new version ships it <b>updates automatically</b> (if you see an old one, press <b>Ctrl+F5</b>). Send ideas and issues to the designated Teams thread.</div>`
+};
+function openFAQ(){const o=$("faqOverlay");$("faqModal").innerHTML=FAQ[S.uiLang];o.classList.remove("hide");
+  $("faqClose").onclick=closeFAQ;}
+function closeFAQ(){$("faqOverlay").classList.add("hide");}
+$("faqBtn").addEventListener("click",openFAQ);
+$("faqOverlay").addEventListener("click",e=>{if(e.target.id==="faqOverlay")closeFAQ();});
 
 /* ====== INIT ====== */
 (async function(){applyTexts();renderTargets();applyVisibility();
