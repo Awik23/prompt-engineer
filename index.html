@@ -1,0 +1,669 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt Engineer v4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Space+Mono:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#121311;--panel:#1a1c19;--panel2:#212420;--line:#33372f;--ink:#ECEEE6;--mute:#8C9384;--faint:#5e6557;
+    --acc:#C7F03D;--acc-dim:#9bbb2f;--warn:#E8895A;--bad:#E0633F;--ok:#7FCB4F;
+    --mono:"Space Mono",monospace;--disp:"Fraunces",serif;--body:"Hanken Grotesk",sans-serif;}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased}
+  body{background-image:radial-gradient(circle at 85% -10%,rgba(199,240,61,.07),transparent 45%);min-height:100vh}
+  .wrap{max-width:1220px;margin:0 auto;padding:26px 22px 60px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--line);padding-bottom:13px;margin-bottom:14px;gap:16px;flex-wrap:wrap}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--acc)}
+  h1{font-family:var(--disp);font-weight:900;font-size:clamp(24px,3.2vw,40px);line-height:.95;margin:0;letter-spacing:-.01em}
+  h1 em{font-style:italic;font-weight:500;color:var(--mute)}
+  .langrow{display:flex;gap:16px;flex-wrap:wrap}
+  .langset{display:flex;align-items:center;gap:7px}
+  .langset .cap{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;font-family:var(--mono);font-size:11px}
+  .seg button{background:transparent;color:var(--mute);border:none;padding:6px 11px;cursor:pointer;font-family:var(--mono);letter-spacing:.05em}
+  .seg button.on{background:var(--acc);color:#16180f;font-weight:700}
+  .targetbar{margin-bottom:18px}
+  .tlabel{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+  .targets{display:flex;flex-wrap:wrap;gap:7px}
+  .tgt{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:8px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--mute);cursor:pointer;transition:.13s}
+  .tgt:hover{border-color:var(--acc-dim);color:var(--ink)}
+  .tgt.on{background:var(--acc);border-color:var(--acc);color:#16180f}
+  .tgt .ic{font-family:var(--mono);font-size:10px;opacity:.7}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .sechead{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin:0 0 13px;display:flex;align-items:center;gap:9px}
+  .sechead .n{color:var(--bg);background:var(--acc);width:20px;height:20px;border-radius:5px;display:grid;place-items:center;font-weight:700;font-size:11px}
+  .hide{display:none!important}
+  label.fld{display:block;margin-bottom:14px}
+  label.fld>span{display:block;font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:6px}
+  label.fld>span small{font-weight:400;color:var(--faint);font-family:var(--mono);font-size:10.5px;margin-left:6px;letter-spacing:.04em}
+  textarea,input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--ink);font-family:var(--body);font-size:14px;padding:10px 12px;resize:vertical;line-height:1.5}
+  textarea:focus,input[type=text]:focus{outline:none;border-color:var(--acc-dim);box-shadow:0 0 0 3px rgba(199,240,61,.12)}
+  textarea::placeholder,input::placeholder{color:var(--faint)}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{font-size:12.5px;font-weight:500;padding:7px 12px;border-radius:20px;border:1px solid var(--line);background:transparent;color:var(--mute);cursor:pointer;transition:.13s;user-select:none}
+  .chip:hover{border-color:var(--acc-dim);color:var(--ink)}
+  .chip.on{background:var(--acc);border-color:var(--acc);color:#16180f;font-weight:700}
+  .toggles{display:flex;flex-direction:column;gap:9px}
+  .tg{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;cursor:pointer}
+  .tg:hover{border-color:var(--acc-dim)}
+  .tg .lab{font-size:13px;font-weight:600}.tg .desc{font-size:11.5px;color:var(--faint);margin-top:2px}
+  .sw{width:36px;height:21px;border-radius:20px;background:var(--line);position:relative;flex:0 0 auto;transition:.15s}
+  .sw::after{content:"";position:absolute;width:15px;height:15px;border-radius:50%;background:var(--mute);top:3px;left:3px;transition:.15s}
+  .tg.on .sw{background:var(--acc)}.tg.on .sw::after{left:18px;background:#16180f}
+  .outwrap{position:sticky;top:16px}
+  .outhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+  .outtitle{font-family:var(--disp);font-size:21px;font-weight:600;display:flex;align-items:center;gap:9px}
+  .modetag{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 7px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);color:var(--mute)}
+  .obtns{display:flex;gap:6px;flex-wrap:wrap}
+  .btn{font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-weight:700;border:none;border-radius:8px;padding:8px 12px;cursor:pointer;transition:.13s}
+  .btn-acc{background:var(--acc);color:#16180f}.btn-acc:hover{background:#d4f95a}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--mute)}.btn-ghost:hover{border-color:var(--acc-dim);color:var(--ink)}
+  .hint{font-size:11.5px;color:var(--faint);background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--acc-dim);border-radius:8px;padding:9px 11px;margin-bottom:10px;line-height:1.5}
+  .out{background:#0d0e0c;border:1px solid var(--line);border-radius:12px;padding:18px;font-family:var(--mono);font-size:12.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;min-height:200px;color:#dfe3d6}
+  .out .tag{color:var(--acc);font-weight:700}.out .vr{color:var(--warn);font-weight:700}
+  .out .empty{color:var(--faint);font-style:italic;font-family:var(--body)}
+  textarea.rawedit{min-height:240px;font-family:var(--mono);font-size:12.5px;background:#0d0e0c;line-height:1.6}
+  /* length meter */
+  .lenbar{margin-top:11px}
+  .lentop{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-bottom:5px;letter-spacing:.03em}
+  .lentrack{height:7px;border-radius:5px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
+  .lenfill{height:100%;width:0;transition:.25s;background:var(--ok)}
+  .lenadvice{font-size:11.5px;margin-top:7px;line-height:1.5;color:var(--mute)}
+  .lenadvice.warn{color:var(--warn)}.lenadvice.bad{color:var(--bad)}
+  /* quality */
+  .qual{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .qdot{width:9px;height:9px;border-radius:50%;background:var(--line)}.qdot.on{background:var(--acc)}
+  .qtxt{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.03em}
+  /* vars */
+  .varspanel{margin-top:14px}
+  .varrow{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .varkey{font-family:var(--mono);font-size:11px;color:var(--acc);white-space:nowrap;min-width:120px;overflow:hidden;text-overflow:ellipsis}
+  /* followups & library tabs */
+  .tabs{display:flex;gap:6px;margin:18px 0 10px}
+  .tab{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:7px 11px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--mute);cursor:pointer}
+  .tab.on{background:var(--panel2);border-color:var(--acc-dim);color:var(--ink)}
+  .fchip{display:inline-block;font-size:12px;padding:8px 11px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;margin:0 6px 6px 0;transition:.13s}
+  .fchip:hover{border-color:var(--acc);color:var(--acc)}
+  .libitem{padding:11px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;margin-bottom:7px;cursor:pointer}
+  .libitem:hover{border-color:var(--acc-dim)}
+  .libitem .ln{font-size:12.5px;font-weight:600;line-height:1.35}
+  .libitem .ls{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+  .hitem{display:flex;align-items:center;gap:9px;padding:9px 11px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;margin-bottom:7px}
+  .hitem .hmain{flex:1;min-width:0;cursor:pointer}
+  .hitem .hname{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hitem .hsub{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:2px}
+  .hbtn{font-family:var(--mono);font-size:10px;text-transform:uppercase;background:transparent;border:1px solid var(--line);color:var(--mute);border-radius:6px;padding:5px 7px;cursor:pointer}
+  .hbtn:hover{border-color:var(--acc-dim);color:var(--ink)}.hbtn.del:hover{border-color:var(--bad);color:var(--bad)}
+  .hempty{font-size:12px;color:var(--faint);font-style:italic;padding:6px 2px}
+  .store-note{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:8px;line-height:1.5}
+  .ibtn{display:inline-grid;place-items:center;width:15px;height:15px;margin-left:6px;border:1px solid var(--line);border-radius:50%;font-size:9px;color:var(--mute);cursor:pointer;font-family:var(--mono);vertical-align:middle;line-height:1}
+  .ibtn:hover{border-color:var(--acc);color:var(--acc)}
+  .ipop{position:absolute;max-width:300px;background:#0d0e0c;border:1px solid var(--acc-dim);border-radius:9px;padding:11px 13px;font-size:12px;line-height:1.5;color:var(--ink);z-index:80;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--acc);color:#16180f;font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:11px 20px;border-radius:9px;opacity:0;transition:.25s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="kicker" id="kicker">Prompt · Engineer</div>
+      <h1 id="title">Prompt Engineer <em>workbench</em></h1>
+    </div>
+    <div class="langrow">
+      <div class="langset"><span class="cap" id="uiCap">Rozhraní</span>
+        <div class="seg"><button id="uiCS" class="on" onclick="setUI('cs')">CZ</button><button id="uiEN" onclick="setUI('en')">EN</button></div></div>
+      <div class="langset"><span class="cap" id="outCap">Jazyk výstupu</span>
+        <div class="seg"><button id="outCS" class="on" onclick="setOut('cs')">CZ</button><button id="outEN" onclick="setOut('en')">EN</button></div></div>
+    </div>
+  </header>
+
+  <div class="targetbar">
+    <div class="tlabel" id="tgtLabel">Cílový nástroj — určuje formát i limit délky</div>
+    <div class="targets" id="targets"></div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="panel" style="margin-bottom:20px">
+        <p class="sechead"><span class="n">1</span> <span id="h1lab">Jádro</span></p>
+        <label class="fld"><span id="taskLab"></span><textarea id="task" rows="2"></textarea></label>
+        <label class="fld"><span id="goalLab"></span><textarea id="goal" rows="2"></textarea></label>
+        <label class="fld"><span id="ctxLab"></span><textarea id="ctx" rows="2"></textarea></label>
+        <label class="fld"><span id="audLab"></span><input type="text" id="aud"></label>
+        <label class="fld" style="margin-bottom:0"><span id="notesLab"></span><input type="text" id="notes"></label>
+      </div>
+      <div class="panel section-role" style="margin-bottom:20px">
+        <p class="sechead"><span class="n">2</span> <span id="h2lab">Role experta</span></p>
+        <div class="chips" id="roles"></div>
+        <label class="fld" style="margin-top:12px;margin-bottom:0"><span id="roleCustomLab"></span><input type="text" id="roleCustom"></label>
+      </div>
+      <div class="panel section-style" style="margin-bottom:20px">
+        <p class="sechead"><span class="n">3</span> <span id="h3lab">Formát & tón</span></p>
+        <label class="fld"><span id="fmtLab"></span><div class="chips" id="formats"></div></label>
+        <label class="fld"><span id="toneLab"></span><div class="chips" id="tones"></div></label>
+        <label class="fld" style="margin-bottom:0"><span id="lenLab"></span><div class="chips" id="lengths"></div></label>
+      </div>
+      <div class="panel">
+        <p class="sechead"><span class="n">4</span> <span id="h4lab">Techniky & omezení</span></p>
+        <div class="toggles" id="toggles"></div>
+        <label class="fld" style="margin-top:13px;margin-bottom:0"><span id="avoidLab"></span><textarea id="avoid" rows="2"></textarea></label>
+      </div>
+    </div>
+
+    <div class="outwrap">
+      <div class="outhead">
+        <div class="outtitle"><span id="outTitle">Hotový prompt</span><span class="modetag" id="modeTag"></span></div>
+        <div class="obtns">
+          <button class="btn btn-ghost" id="builderBtn">← Builder</button>
+          <button class="btn btn-ghost" id="saveBtn">＋ Uložit</button>
+          <button class="btn btn-acc" id="copyBtn">Kopírovat</button>
+        </div>
+      </div>
+      <div class="hint" id="hint"></div>
+      <div id="outBox" class="out"></div>
+      <textarea id="rawEdit" class="rawedit hide"></textarea>
+
+      <!-- length meter -->
+      <div class="lenbar">
+        <div class="lentop"><span id="lenLabel">Délka</span><span id="lenCount">0</span></div>
+        <div class="lentrack"><div class="lenfill" id="lenFill"></div></div>
+        <div class="lenadvice" id="lenAdvice"></div>
+      </div>
+
+      <!-- quality -->
+      <div class="qual">
+        <div style="display:flex;gap:5px" id="qDots"></div>
+        <div class="qtxt" id="qTxt"></div>
+      </div>
+
+      <!-- variables -->
+      <div class="varspanel hide" id="varsPanel">
+        <div class="sechead" style="margin-bottom:9px" id="varsHead">Proměnné</div>
+        <div id="varsList"></div>
+      </div>
+
+      <!-- tabs: followups / library / saved -->
+      <div class="tabs">
+        <button class="tab on" data-tab="follow" id="tabFollow">Follow-up</button>
+        <button class="tab" data-tab="library" id="tabLib">Knihovna</button>
+        <button class="tab" data-tab="saved" id="tabSaved">Uložené</button>
+      </div>
+
+      <div id="paneFollow">
+        <div class="hint" id="followHint" style="border-left-color:var(--warn)"></div>
+        <div id="followChips"></div>
+      </div>
+
+      <div id="paneLib" class="hide">
+        <div id="libList"></div>
+      </div>
+
+      <div id="paneSaved" class="hide">
+        <div class="obtns" style="margin-bottom:10px">
+          <button class="btn btn-ghost" id="exportBtn">Export</button>
+          <button class="btn btn-ghost" id="importBtn">Import</button>
+        </div>
+        <div id="histList"></div>
+        <div class="store-note" id="storeNote"></div>
+        <input type="file" id="fileIn" accept="application/json" style="display:none">
+      </div>
+    </div>
+  </div>
+</div>
+<div class="ipop hide" id="ipop"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ====== STATE ====== */
+const S={uiLang:"cs",outLang:"cs",target:"generic",mode:"build",rawText:"",
+  task:"",goal:"",ctx:"",aud:"",notes:"",roleIdx:0,roleCustom:"",
+  format:0,tone:0,length:1,avoid:"",
+  tech:{cot:false,ground:false,uncertainty:false,steps:false,example:false,critique:false},
+  vars:{}};
+let HISTORY=[];
+
+/* ====== TARGET BUDGETS (chars) ====== */
+const BUDGET={generic:4000,claude:6000,gpt:4000,perplexity:1500,image:1100,slides:2200,duvo:2600,embedded:1100};
+
+/* ====== DICTIONARIES (abbreviated where identical) ====== */
+const T={
+ cs:{
+  kicker:"Prompt · Engineer",title:'Prompt Engineer <em>workbench</em>',uiCap:"Rozhraní",outCap:"Jazyk výstupu",
+  tgtLabel:"Cílový nástroj — určuje formát i limit délky",
+  h1:"Jádro",h2:"Role experta",h3:"Formát & tón",h4:"Techniky & omezení",
+  taskLab:'Úkol — co má AI udělat? <small>required</small>',goalLab:'Cíl — jaký výsledek tím chci? <small>doporučeno</small>',
+  ctxLab:'Kontext / pozadí <small>volitelné</small>',audLab:'Publikum / pro koho <small>volitelné</small>',
+  notesLab:'Poznámka / odkaz na nástroj <small>jen tvá evidence</small>',
+  roleCustomLab:"…nebo vlastní role",fmtLab:"Formát výstupu",toneLab:"Tón",lenLab:"Délka / rozsah",
+  avoidLab:'Čemu se vyhnout <small>volitelné</small>',
+  outTitle:"Hotový prompt",copy:"Kopírovat",save:"＋ Uložit",builder:"← Builder",toast:"Zkopírováno ✓",savedToast:"Uloženo ✓",
+  modeBuild:"sestavený",modeRaw:"šablona",
+  taskPH:"např. Připrav strategii retail media kampaně na Rohlíku pro dentální značku",
+  goalPH:"např. Vyhrát pitch a schválit 2měsíční rozpočet",ctxPH:"např. Klient Herbadent, sponsored products + display",
+  audPH:"např. management klienta, technický tým",notesPH:"např. Rohlik Ads Assistant — beta",
+  roleCustomPH:"např. senior retail media stratég",avoidPH:"např. žádné generické fráze, nevymýšlej čísla",
+  roles:["— žádná —","Stratég","Datový analytik","Copywriter","Konzultant","Vývojář","Vyjednavač","Učitel / kouč","Editor"],
+  formats:["Strukturované sekce","Odrážky","Tabulka","Číslovaný postup","Souvislý text","Markdown","JSON"],
+  tones:["Přímý, věcný","Formální","Neformální","Analytický","Přesvědčivý","Vzdělávací"],
+  lengths:["Stručné","Středně podrobné","Vyčerpávající"],
+  tech:[{k:"cot",lab:"Uvažuj krok za krokem",desc:"Rozmysli řešení před odpovědí"},
+   {k:"ground",lab:"Drž se faktů / zdrojů",desc:"Žádné vymýšlení, opora ve faktech"},
+   {k:"uncertainty",lab:"Přiznej nejistotu",desc:"Když si není jistý, ať to řekne"},
+   {k:"steps",lab:"Rozděl na fáze",desc:"Po krocích, ne všechno najednou"},
+   {k:"example",lab:"Vlož místo pro příklad",desc:"Slot pro ukázku vstup/výstup"},
+   {k:"critique",lab:"Sebekontrola na konci",desc:"Zhodnoť slabiny a rizika"}],
+  H:{ROLE:"ROLE",GOAL:"CÍL",TASK:"ÚKOL",CONTEXT:"KONTEXT",AUDIENCE:"PUBLIKUM",FORMAT:"FORMÁT A STYL",GUIDE:"POKYNY",
+     AVOID:"ČEMU SE VYHNI",EXAMPLE:"PŘÍKLAD",TRIGGER:"SPOUŠTĚČ",INPUTS:"VSTUPY A SYSTÉMY",STEPS:"POSTUP",
+     RULES:"ROZHODOVACÍ PRAVIDLA",GUARD:"POJISTKY / ESKALACE",OUTPUT:"VÝSTUP — kam jde",TOPIC:"TÉMA",SLIDES:"POČET SLIDŮ",
+     VISUAL:"VIZUÁLNÍ STYL",KEY:"KLÍČOVÉ BODY",QUESTION:"OTÁZKA",FOCUS:"ZAMĚŘ SE NA",SOURCES:"PREFERUJ ZDROJE",LANG:"JAZYK ODPOVĚDI",TONE:"TÓN"},
+  fmt:{0:"Rozděl odpověď do jasných sekcí s nadpisy.",1:"Odpověz v odrážkách.",2:"Výstup formátuj jako tabulku.",3:"Odpověz jako číslovaný postup.",4:"Souvislý text bez odrážek.",5:"Vrať čistý markdown.",6:"Vrať POUZE validní JSON."},
+  len:{0:"Buď stručný — jen podstatné.",1:"Středně podrobně.",2:"Vyčerpávající — i hraniční případy."},
+  techS:{cot:"Než odpovíš, rozmysli si řešení krok za krokem.",steps:"Postupuj po fázích — nech mě po každé fázi reagovat.",ground:"Opírej se o fakta a uváděj zdroje. Nevymýšlej údaje — když nevíš, řekni to.",uncertainty:"Když si nejsi jistý, řekni to explicitně.",critique:"Na závěr přidej sebekontrolu: slabiny, rizika, co může selhat."},
+  respond:"Odpověz česky.",roleSent:r=>`Jsi ${r}. Odpovídej z této perspektivy a úrovně expertízy.`,goalSent:g=>`Výsledek, kterého chci dosáhnout: ${g}`,audSent:a=>`Výstup je pro: ${a}. Přizpůsob tomu jazyk a hloubku.`,
+  defaultTask:"[doplň úkol vlevo nahoře]",emptyMsg:"Začni psát úkol vlevo — prompt se začne skládat tady. Nebo si v záložce Knihovna vyber hotovou šablonu.",
+  histEmpty:"Zatím nic uloženého. Naplň prompt a klikni „＋ Uložit“.",confirmDel:"Smazat tento uložený prompt?",renamePrompt:"Nový název:",
+  storeYes:"✓ Uložené prompty se drží automaticky v tomto prohlížeči.",storeNo:"⚠ Auto-ukládání není dostupné — použij Export.",importErr:"Soubor se nepodařilo načíst.",
+  varsHead:"Proměnné — doplň hodnoty",lenLabel:"Délka",
+  qTxt:n=>`Kompletnost ${n}/5`,
+  followHead:"Vlož PO odpovědi nástroje — když je výstup špatně/dlouhý:",
+  hints:{generic:"Univerzální markdown formát. Funguje slušně ve většině chatovacích AI.",
+   claude:"Pro Claude: sekce v XML tagách (<task>…). Snese delší prompty.",
+   gpt:"Pro ChatGPT / Gemini: štíhlejší markdown.",
+   perplexity:"Pro Perplexity: krátká otázka + zaměření + zdroje. Krátké je lepší.",
+   image:"Pro obrazové AI: scéna + styl + kompozice + parametry.",
+   slides:"Pro prezentační AI (Gamma, Tome, Claude Design): brief — téma, publikum, počet slidů.",
+   duvo:"Pro duvo.ai: workflow — cíl, spouštěč, vstupy, kroky, pravidla, eskalace.",
+   embedded:"Vestavěný/beta asistent (Rohlik Ads aj.): krátký kontext, drž prompt KRÁTKÝ. Dlouhé padají na chybu."},
+  lenAdv:{ok:"V pohodě pro tento nástroj.",warn:"Začíná to být dlouhé — zvaž zkrácení nebo rozdělení na kroky.",bad:"⚠ Moc dlouhé pro tento nástroj — pravděpodobně selže (jako „Connection failed“). Rozděl na víc kroků nebo zkrať na podstatu."},
+  fu:{double:'Jsi si jistý? Můžeš čísla ještě jednou ověřit (double-check), že jsou správně?',
+      short:'Tohle bylo moc dlouhé. Napiš stejný požadavek znovu pod 600 znaků, nech jen nezbytná pravidla.',
+      split:'Pojďme to udělat po krocích. Teď ignoruj vše kromě kroku 1: [první dílčí úkol]. Po dokončení budeme pokračovat.',
+      cont:'Pokračuj dalším krokem.',
+      tableonly:'Vrať jen finální tabulku, bez vysvětlování.',
+      stricter:'Drž se přesně zadaného formátu sloupců a nepřidávej nic navíc.'},
+  fuLab:{double:"Ověř čísla",short:"Zkrať pod 600 zn.",split:"Rozděl na kroky",cont:"Pokračuj",tableonly:"Jen tabulku",stricter:"Přísně dle formátu"},
+  tabFollow:"Follow-up",tabLib:"Knihovna",tabSaved:"Uložené",dup:"Duplikovat"
+ },
+ en:{
+  kicker:"Prompt · Engineer",title:'Prompt Engineer <em>workbench</em>',uiCap:"Interface",outCap:"Output language",
+  tgtLabel:"Target tool — defines format and length limit",
+  h1:"Core",h2:"Expert role",h3:"Format & tone",h4:"Techniques & limits",
+  taskLab:'Task — what should the AI do? <small>required</small>',goalLab:'Goal — what outcome do I want? <small>recommended</small>',
+  ctxLab:'Context / background <small>optional</small>',audLab:'Audience / who is it for <small>optional</small>',
+  notesLab:'Note / link to the tool <small>your reference only</small>',
+  roleCustomLab:"…or a custom role",fmtLab:"Output format",toneLab:"Tone",lenLab:"Length / depth",
+  avoidLab:'What to avoid <small>optional</small>',
+  outTitle:"Generated prompt",copy:"Copy",save:"＋ Save",builder:"← Builder",toast:"Copied ✓",savedToast:"Saved ✓",
+  modeBuild:"assembled",modeRaw:"template",
+  taskPH:"e.g. Build a retail-media campaign strategy on Rohlík for a dental brand",
+  goalPH:"e.g. Win the pitch and approve a 2-month budget",ctxPH:"e.g. Client Herbadent, sponsored products + display",
+  audPH:"e.g. client management, technical team",notesPH:"e.g. Rohlik Ads Assistant — beta",
+  roleCustomPH:"e.g. senior retail-media strategist",avoidPH:"e.g. no generic phrases, don't invent numbers",
+  roles:["— none —","Strategist","Data analyst","Copywriter","Consultant","Developer","Negotiator","Teacher / coach","Editor"],
+  formats:["Structured sections","Bullets","Table","Numbered steps","Prose","Markdown","JSON"],
+  tones:["Direct, plain","Formal","Casual","Analytical","Persuasive","Educational"],
+  lengths:["Concise","Moderately detailed","Exhaustive"],
+  tech:[{k:"cot",lab:"Think step by step",desc:"Reason before answering"},
+   {k:"ground",lab:"Stick to facts / sources",desc:"No invention, ground in facts"},
+   {k:"uncertainty",lab:"Admit uncertainty",desc:"Say so when unsure"},
+   {k:"steps",lab:"Break into phases",desc:"Step by step, not all at once"},
+   {k:"example",lab:"Add an example slot",desc:"Slot for input/output sample"},
+   {k:"critique",lab:"Self-check at the end",desc:"Assess weaknesses and risks"}],
+  H:{ROLE:"ROLE",GOAL:"GOAL",TASK:"TASK",CONTEXT:"CONTEXT",AUDIENCE:"AUDIENCE",FORMAT:"FORMAT & STYLE",GUIDE:"GUIDELINES",
+     AVOID:"AVOID",EXAMPLE:"EXAMPLE",TRIGGER:"TRIGGER",INPUTS:"INPUTS & SYSTEMS",STEPS:"PROCESS",RULES:"DECISION RULES",
+     GUARD:"GUARDRAILS / ESCALATION",OUTPUT:"OUTPUT — where it goes",TOPIC:"TOPIC",SLIDES:"NUMBER OF SLIDES",
+     VISUAL:"VISUAL STYLE",KEY:"KEY POINTS",QUESTION:"QUESTION",FOCUS:"FOCUS ON",SOURCES:"PREFER SOURCES",LANG:"ANSWER LANGUAGE",TONE:"TONE"},
+  fmt:{0:"Split into clear sections with headers.",1:"Answer in bullets.",2:"Format as a table.",3:"Answer as numbered steps.",4:"Prose, no bullets.",5:"Return clean markdown.",6:"Return ONLY valid JSON."},
+  len:{0:"Be concise — essentials only.",1:"Moderately detailed.",2:"Exhaustive — cover edge cases."},
+  techS:{cot:"Before answering, reason step by step.",steps:"Work in phases — let me react after each phase.",ground:"Ground in facts and cite sources. Don't invent data — if unsure, say so.",uncertainty:"When unsure, say so explicitly.",critique:"At the end add a self-check: weaknesses, risks, what could fail."},
+  respond:"Answer in English.",roleSent:r=>`You are ${r}. Respond from this perspective and level of expertise.`,goalSent:g=>`The outcome I want: ${g}`,audSent:a=>`The output is for: ${a}. Adapt language and depth.`,
+  defaultTask:"[add the task at top left]",emptyMsg:"Start typing the task on the left — or pick a ready template under the Library tab.",
+  histEmpty:"Nothing saved yet. Fill a prompt and click “＋ Save”.",confirmDel:"Delete this saved prompt?",renamePrompt:"New name:",
+  storeYes:"✓ Saved prompts persist automatically in this browser.",storeNo:"⚠ Auto-save unavailable — use Export.",importErr:"Could not read the file.",
+  varsHead:"Variables — fill in the values",lenLabel:"Length",
+  qTxt:n=>`Completeness ${n}/5`,
+  followHead:"Paste AFTER the tool replies — when the output is wrong/too long:",
+  hints:{generic:"Universal markdown format. Works across most chat AIs.",
+   claude:"For Claude: XML-tagged sections (<task>…). Handles long prompts.",
+   gpt:"For ChatGPT / Gemini: leaner markdown.",
+   perplexity:"For Perplexity: short question + focus + sources. Shorter is better.",
+   image:"For image AI: scene + style + composition + parameters.",
+   slides:"For presentation AI (Gamma, Tome, Claude Design): a brief — topic, audience, # slides.",
+   duvo:"For duvo.ai: a workflow — goal, trigger, inputs, steps, rules, escalation.",
+   embedded:"Embedded/beta assistant (Rohlik Ads etc.): short context, keep the prompt SHORT. Long ones error out."},
+  lenAdv:{ok:"Fine for this tool.",warn:"Getting long — consider shortening or splitting into steps.",bad:"⚠ Too long for this tool — likely to fail (like “Connection failed”). Split into steps or trim to the essentials."},
+  fu:{double:'Are you sure? Can you double-check the numbers once more to confirm they are correct?',
+      short:'That was too long. Rewrite the same request in under 600 characters, keep only the essential rules.',
+      split:'Let\'s do this in steps. For now ignore everything except step 1: [first sub-task]. We\'ll continue after.',
+      cont:'Continue with the next step.',
+      tableonly:'Return only the final table, no explanation.',
+      stricter:'Stick exactly to the requested column format and add nothing extra.'},
+  fuLab:{double:"Double-check numbers",short:"Shorten <600 chars",split:"Split into steps",cont:"Continue",tableonly:"Table only",stricter:"Strict format"},
+  tabFollow:"Follow-up",tabLib:"Library",tabSaved:"Saved",dup:"Duplicate"
+ }
+};
+const TARGETS=[
+ {k:"generic",cs:"Univerzální",en:"Universal",ic:"GEN"},
+ {k:"claude",cs:"Claude",en:"Claude",ic:"XML"},
+ {k:"gpt",cs:"ChatGPT / Gemini",en:"ChatGPT / Gemini",ic:"MD"},
+ {k:"perplexity",cs:"Perplexity",en:"Perplexity",ic:"SRCH"},
+ {k:"image",cs:"Obrazové AI",en:"Image AI",ic:"IMG"},
+ {k:"slides",cs:"Prezentační AI",en:"Presentation AI",ic:"DECK"},
+ {k:"duvo",cs:"duvo.ai",en:"duvo.ai",ic:"FLOW"},
+ {k:"embedded",cs:"Vestavěný/beta (Rohlik Ads)",en:"Embedded/beta (Rohlik Ads)",ic:"APP"}];
+
+/* ====== INFO TOOLTIPS ====== */
+const INFO={cs:{
+  core:"Základ promptu. Úkol je povinný; cíl, kontext a publikum prompt výrazně zlepší.",
+  task:"Co konkrétně má AI udělat (sloveso + předmět), např. „Připrav tabulku spendu kampaně“. Datumy/firmy sem dávej jen když nepoužíváš šablonu s proměnnými — jinak je doplň dole v panelu Proměnné.",
+  goal:"Jaký výsledek nebo rozhodnutí tím sleduješ. Pomáhá AI správně zacílit, např. „abych poznal, kde ubrat budget“.",
+  ctx:"Pozadí, které AI nezná: klient, trh, rozpočet, kanály, omezení. Sem napiš i to, co přiložíš (např. „přikládám export kampaně“).",
+  aud:"Pro koho je výstup — řídí jazyk a hloubku. Např. „management klienta“ vs „technický tým“.",
+  notes:"Jen tvoje poznámka (např. odkaz na nástroj, pro který prompt děláš). Do promptu NEvstupuje, uloží se k němu do historie.",
+  role:"Z jaké pozice/expertízy má AI odpovídat. Vyber roli nebo napiš vlastní. Mění úhel pohledu, ne fakta.",
+  rolecustom:"Vlastní role, když ti nabídnuté nesedí. Např. „senior retail media stratég s 10 lety praxe“.",
+  style:"Formát = struktura (tabulka, odrážky…). Tón = styl vyjadřování. Délka = rozsah (u prezentací i počet slidů).",
+  tech:"Techniky zvyšující kvalitu: uvažování krok za krokem, opora ve faktech, přiznání nejistoty, sebekontrola na konci.",
+  avoid:"Čeho se má AI vyvarovat — fráze, vymyšlená čísla, konkrétní formát. Konkrétní zákazy fungují líp než obecné.",
+  target:"Pro který nástroj prompt děláš. Mění FORMÁT i LIMIT délky. Vestavěné/beta nástroje (Rohlik Ads) mají krátký limit — dlouhé prompty padají.",
+  outlang:"Jazyk vygenerovaného promptu — nezávislý na jazyku rozhraní. Můžeš psát vstupy česky a chtít finální prompt anglicky.",
+  vars:"Místa [INSERT …] a {{…}} v promptu. SEM doplň konkrétní hodnoty — datumy, firmy, názvy kampaní. Při kopírování se automaticky dosadí do textu."
+ },en:{
+  core:"The base of the prompt. Task is required; goal, context and audience improve it a lot.",
+  task:"What exactly the AI should do (verb + object), e.g. “Build a campaign spend table”. Put dates/companies here only if you're NOT using a template with variables — otherwise fill them in the Variables panel below.",
+  goal:"The outcome or decision you're after. Helps the AI aim correctly, e.g. “to see where to cut budget”.",
+  ctx:"Background the AI doesn't know: client, market, budget, channels, constraints. Also note what you'll attach (e.g. “attaching a campaign export”).",
+  aud:"Who the output is for — drives language and depth. E.g. “client management” vs “technical team”.",
+  notes:"Your reference only (e.g. a link to the tool you're building this for). It is NOT added to the prompt; it's saved with it in history.",
+  role:"The position/expertise the AI answers from. Pick a role or write your own. Changes the angle, not the facts.",
+  rolecustom:"A custom role if none fit. E.g. “senior retail-media strategist with 10 years' experience”.",
+  style:"Format = structure (table, bullets…). Tone = style. Length = depth (for decks also number of slides).",
+  tech:"Quality-boosting techniques: step-by-step reasoning, grounding in facts, admitting uncertainty, a self-check at the end.",
+  avoid:"What the AI should avoid — phrases, invented numbers, a specific format. Concrete bans work better than vague ones.",
+  target:"Which tool the prompt is for. Changes FORMAT and the length LIMIT. Embedded/beta tools (Rohlik Ads) have a short limit — long prompts fail.",
+  outlang:"Language of the generated prompt — independent of the interface language. You can type inputs in Czech and want the final prompt in English.",
+  vars:"The [INSERT …] and {{…}} slots in the prompt. Fill the concrete values HERE — dates, companies, campaign names. They're substituted into the text on copy."
+ }};
+let ipopKey=null;
+function showPop(key,anchor){const pop=$("ipop");pop.textContent=INFO[S.uiLang][key]||"";
+  const r=anchor.getBoundingClientRect();pop.classList.remove("hide");
+  const left=Math.min(window.scrollX+r.left, window.scrollX+document.documentElement.clientWidth-310);
+  pop.style.top=(window.scrollY+r.bottom+6)+"px";pop.style.left=Math.max(8,left)+"px";ipopKey=key;}
+function hidePop(){$("ipop").classList.add("hide");ipopKey=null;}
+document.addEventListener("click",e=>{if(!(e.target.classList&&e.target.classList.contains("ibtn"))&&e.target.id!=="ipop")hidePop();});
+function addIcon(id,key){const el=$(id);if(!el||!(INFO[S.uiLang]&&INFO[S.uiLang][key]))return;
+  if(el.querySelector(".ibtn"))return;
+  const b=document.createElement("span");b.className="ibtn";b.textContent="i";
+  b.onclick=(e)=>{e.stopPropagation();e.preventDefault();if(ipopKey===key)hidePop();else showPop(key,b);};el.appendChild(b);}
+function attachInfo(){[["h1lab","core"],["h2lab","role"],["h3lab","style"],["h4lab","tech"],
+  ["taskLab","task"],["goalLab","goal"],["ctxLab","ctx"],["audLab","aud"],["notesLab","notes"],
+  ["roleCustomLab","rolecustom"],["avoidLab","avoid"],["tgtLabel","target"],["outCap","outlang"]].forEach(([id,k])=>addIcon(id,k));}
+
+/* ====== LIBRARY (real Rohlik Ads prompts + generic) ====== */
+const LIB=[
+ {cat:"Rohlik Ads",name:{cs:"Měsíční spend breakdown brandu",en:"Monthly spend breakdown by brand"},target:"embedded",
+  body:`Show me the [INSERT MONTH + YEAR] spend breakdown for all [INSERT BRAND NAME] campaigns, split by calendar month only (1 [INSERT MONTH] – [INSERT LAST DAY OF MONTH + YEAR]).
+For each campaign show a table: Campaign name, Media format, Budget label (Trade / Retail Media), [INSERT MONTH + YEAR] spend in CZK.
+Calculation rule: use the cumulative daily-data method — cumulative spend at the last day of the target month minus cumulative spend at the last day of the prior month. Never use lifetime or accounting-period totals. Flag cross-month campaigns explicitly; only count spend within 1 [INSERT MONTH] – [INSERT LAST DAY OF MONTH + YEAR].
+Then a summary table: total by label (Trade vs Retail Media), total by media format, grand total.
+Before generating the result, double-check your work.`},
+ {cat:"Rohlik Ads",name:{cs:"Quick reference tabulka sestav (banner)",en:"Quick reference table of ads (banner)"},target:"embedded",
+  body:`Show me a quick reference table for campaign [INSERT CAMPAIGN NAME] with columns: Ad ID, Ad Group ID, Targeted Categories, Daily Budget, Budget Share, Avg. Daily Spend (actual), Utilization (%), Status. Remove the Creative column. Sort by Ad ID ascending. Confirm which ads are running, daily_completed, or inactive. Compute avg daily spend = total spend ÷ active days. Flag reallocation: highlight ads over 100% utilization for budget increase and under 70% for decrease. Use actual data only, no fabricated fields.`},
+ {cat:"Rohlik Ads",name:{cs:"Cost efficiency tabulka (SKU/produkty)",en:"Cost-efficiency table (SKUs/products)"},target:"embedded",
+  body:`Show me a cost efficiency table for campaign [INSERT CAMPAIGN NAME]. All SKUs (one ad per SKU), data since campaign start. Columns: Product Name, SKU, Spend, Purchases, CPP (=Spend÷Purchases), Add to Cart, CPAC (=Spend÷Add to Cart), Status. Resolve product names instead of Ad IDs. Sort by CPP ascending (best first). Put SKUs with 0 purchases at the bottom, sorted by CPAC ascending; show CPAC as ∞ when 0 add-to-carts. After the table give actionable recommendations: standouts, underperformers, no-purchase SKUs. Use actual data only.`},
+ {cat:"Rohlik Ads",name:{cs:"Kampaně daily-completed (potenciál +budget)",en:"Daily-completed campaigns (+budget potential)"},target:"embedded",
+  body:`From the holistic overview, show all campaigns and ads that are currently active but daily-budget completed, and since when. For each: Campaign Name, Ad/SKU (product name), Daily Budget, Spend Today, Total Spent, Total Budget, % Budget Used, Status, and the date/time since daily completion started.`},
+ {cat:"Rohlik Ads",name:{cs:"Aktivní ale 0 spend za 48h",en:"Active but zero spend in 48h"},target:"embedded",
+  body:`From the holistic overview, show all campaigns and ads that are currently active but had zero spend in the last 48 hours. For each: Campaign Name, Ad/SKU (product name), Format, Daily Budget, Total Budget, Total Spent, Last Recorded Spend Date/Time, Status, and how long inactive (in hours).`},
+ {cat:"Rohlik Ads",name:{cs:"CPM rate card všech formátů",en:"CPM rate card, all formats"},target:"embedded",
+  body:`Generate a complete CPM rate card for all ad formats on the Rohlik Ads Platform (CZ), split by budget type TRADE vs BRAND (Retail Media). Premium formats (Homepage Banner, Thank You Banner) only under BRAND; Category Banner and Category Banner Video under both; all remaining medium formats only under TRADE. If a format isn't available for a budget type, omit its CPM instead of showing N/A.`}
+];
+
+/* ====== STORAGE ====== */
+const KEY="prompt_engineer_history_v1";
+const HS={has:(typeof window!=="undefined"&&window.storage&&typeof window.storage.set==="function")};
+async function storeSave(list){if(HS.has){try{await window.storage.set(KEY,JSON.stringify(list),false);return true;}catch(e){}}return false;}
+async function storeLoad(){if(HS.has){try{const r=await window.storage.get(KEY,false);return r&&r.value?JSON.parse(r.value):[];}catch(e){return [];}}return [];}
+
+/* ====== HELPERS ====== */
+function L(){return T[S.uiLang];}
+function OL(){return T[S.outLang];}
+function $(id){return document.getElementById(id);}
+function val(x,fb){return (x&&x.trim())?x.trim():fb;}
+
+/* ====== BUILDERS ====== */
+function sec(tag,body,mode){if(mode==="xml"){const x=tag.toLowerCase().replace(/[^a-z]/g,"_");return `<${x}>\n${body}\n</${x}>`;}return `# ${tag}\n${body}`;}
+function techLines(){const d=OL(),o=[];["cot","steps","ground","uncertainty","critique"].forEach(k=>{if(S.tech[k])o.push("- "+d.techS[k]);});return o;}
+function roleName(){if(S.roleCustom.trim())return S.roleCustom.trim();return S.roleIdx>0?OL().roles[S.roleIdx]:"";}
+function buildStandard(mode){const d=OL(),H=d.H,b=[];const role=roleName();
+  if(role)b.push(sec(H.ROLE,d.roleSent(role),mode));
+  b.push(sec(H.TASK,val(S.task,d.defaultTask),mode));
+  if(S.goal.trim())b.push(sec(H.GOAL,d.goalSent(S.goal.trim()),mode));
+  if(S.ctx.trim())b.push(sec(H.CONTEXT,S.ctx.trim(),mode));
+  if(S.aud.trim())b.push(sec(H.AUDIENCE,d.audSent(S.aud.trim()),mode));
+  b.push(sec(H.FORMAT,`- ${d.fmt[S.format]}\n- ${H.TONE}: ${d.tones[S.tone]}.\n- ${d.len[S.length]}\n- ${d.respond}`,mode));
+  const tl=techLines();if(tl.length)b.push(sec(H.GUIDE,tl.join("\n"),mode));
+  if(S.avoid.trim())b.push(sec(H.AVOID,S.avoid.trim(),mode));
+  if(S.tech.example)b.push(sec(H.EXAMPLE,(S.outLang==="cs"?"Vstup: [ukázkový vstup]\nKýžený výstup: [ukázkový výstup]":"Input: [sample input]\nDesired output: [sample output]"),mode));
+  return b.join("\n\n");}
+function buildPerplexity(){const d=OL(),H=d.H,cs=S.outLang==="cs",b=[];
+  b.push(`# ${H.QUESTION}\n${val(S.task,d.defaultTask)}`);
+  if(S.goal.trim())b.push(`# ${H.GOAL}\n${S.goal.trim()}`);
+  if(S.ctx.trim())b.push(`# ${H.CONTEXT}\n${S.ctx.trim()}`);
+  const f=[];if(S.tech.ground)f.push(cs?"jen ověřitelná fakta s odkazy":"only verifiable facts with links");
+  if(S.tech.uncertainty)f.push(cs?"označ, kde si zdroje protiřečí":"flag where sources disagree");
+  f.push(cs?"nejnovější dostupné údaje":"the most recent data available");
+  b.push(`# ${H.FOCUS}\n- ${f.join("\n- ")}`);
+  b.push(`# ${H.SOURCES}\n${cs?"primární zdroje před agregátory":"primary sources over aggregators"}`);
+  if(S.avoid.trim())b.push(`# ${H.AVOID}\n${S.avoid.trim()}`);
+  b.push(`# ${H.LANG}\n${d.respond}`);return b.join("\n\n");}
+function buildImage(){const cs=S.outLang==="cs",b=[];
+  b.push((cs?"Scéna / předmět: ":"Scene / subject: ")+val(S.task,cs?"[co má být na obrázku]":"[what the image shows]"));
+  if(S.ctx.trim())b.push((cs?"Detaily: ":"Details: ")+S.ctx.trim());
+  if(S.goal.trim())b.push((cs?"Účel / nálada: ":"Purpose / mood: ")+S.goal.trim());
+  b.push(cs?"Styl: [fotorealistické / ilustrace / 3D / akvarel]":"Style: [photorealistic / illustration / 3D / watercolor]");
+  b.push(cs?"Kompozice & světlo: [úhel, záběr, osvětlení]":"Composition & light: [angle, shot, lighting]");
+  b.push("Parameters: --ar 16:9 --q 2");
+  if(S.avoid.trim())b.push((cs?"Negative prompt: ":"Negative prompt: ")+S.avoid.trim());
+  return b.join("\n");}
+function buildSlides(){const d=OL(),H=d.H,cs=S.outLang==="cs",b=[];
+  b.push(`# ${H.TOPIC}\n${val(S.task,d.defaultTask)}`);
+  if(S.goal.trim())b.push(`# ${H.GOAL}\n${S.goal.trim()}`);
+  if(S.aud.trim())b.push(`# ${H.AUDIENCE}\n${S.aud.trim()}`);
+  b.push(`# ${H.SLIDES}\n${{0:"6–8",1:"10–12",2:"15+"}[S.length]}`);
+  b.push(`# ${H.TONE}\n${d.tones[S.tone]}`);
+  b.push(`# ${H.VISUAL}\n${cs?"[barvy / brand / nálada]":"[colors / brand / mood]"}`);
+  b.push(`# ${H.KEY}\n${S.ctx.trim()||(cs?"[hlavní body, jeden na slide]":"[key points, one per slide]")}`);
+  if(S.avoid.trim())b.push(`# ${H.AVOID}\n${S.avoid.trim()}`);
+  b.push(`# ${H.LANG}\n${d.respond}`);return b.join("\n\n");}
+function buildDuvo(){const d=OL(),H=d.H,cs=S.outLang==="cs",b=[];
+  b.push(`# ${H.GOAL}\n${val(S.goal,cs?"[jaký výsledek má agent doručit]":"[the outcome the agent should deliver]")}`);
+  b.push(`# ${H.TASK}\n${val(S.task,cs?"[jaký proces automatizovat]":"[which process to automate]")}`);
+  b.push(`# ${H.TRIGGER}\n${cs?"[kdy spustit — událost, čas, e-mail/soubor]":"[when it runs — event, schedule, email/file]"}`);
+  b.push(`# ${H.INPUTS}\n${S.ctx.trim()||(cs?"[systémy: portály, e-maily, tabulky, ERP]":"[systems: portals, emails, sheets, ERP]")}`);
+  b.push(`# ${H.STEPS}\n1. [${cs?"krok":"step"}]\n2. [${cs?"krok":"step"}]\n3. [${cs?"krok":"step"}]`);
+  const r=[];if(S.tech.ground)r.push(cs?"rozhoduj jen podle dat z propojených systémů":"decide only from connected-system data");
+  r.push(cs?"[pravidlo: pokud X, pak Y]":"[rule: if X then Y]");
+  b.push(`# ${H.RULES}\n- ${r.join("\n- ")}`);
+  b.push(`# ${H.GUARD}\n- ${cs?"eskaluj na člověka při: [nejednoznačnost / částka nad limit / chybí data]":"escalate to a human on: [ambiguity / amount over limit / missing data]"}`);
+  b.push(`# ${H.OUTPUT}\n${cs?"[kam zapsat výsledek]":"[where to write the result]"}`);
+  if(S.avoid.trim())b.push(`# ${H.AVOID}\n${S.avoid.trim()}`);return b.join("\n\n");}
+function buildFromFields(){switch(S.target){case"claude":return buildStandard("xml");case"perplexity":return buildPerplexity();
+  case"image":return buildImage();case"slides":return buildSlides();case"duvo":return buildDuvo();default:return buildStandard("md");}}
+
+/* base text depending on mode */
+function baseText(){return S.mode==="raw"?S.rawText:buildFromFields();}
+
+/* ====== VARIABLES ====== */
+function detectVars(text){const re=/\[INSERT[^\]]*\]|\{\{[^}]+\}\}/g;const set=[];let m;
+  while((m=re.exec(text))!==null){if(!set.includes(m[0]))set.push(m[0]);}return set;}
+function fillVars(text){let out=text;Object.keys(S.vars).forEach(k=>{const v=S.vars[k];if(v&&v.trim()){out=out.split(k).join(v.trim());}});return out;}
+function effectivePrompt(){return fillVars(baseText());}
+
+function renderVars(){
+  const text=baseText();const found=detectVars(text);
+  const panel=$("varsPanel"),list=$("varsList");
+  if(!found.length){panel.classList.add("hide");list.innerHTML="";return;}
+  panel.classList.remove("hide");$("varsHead").textContent=L().varsHead;addIcon("varsHead","vars");
+  list.innerHTML="";
+  found.forEach(k=>{
+    const row=document.createElement("div");row.className="varrow";
+    const lab=document.createElement("div");lab.className="varkey";lab.textContent=k;
+    const inp=document.createElement("input");inp.type="text";inp.value=S.vars[k]||"";
+    inp.placeholder=L().uiLang==="en"?"value…":"hodnota…";
+    inp.oninput=()=>{S.vars[k]=inp.value;render(false);};
+    row.appendChild(lab);row.appendChild(inp);list.appendChild(row);
+  });
+}
+
+/* ====== RENDER ====== */
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function highlight(t){return esc(t).replace(/^# (.+)$/gm,'<span class="tag"># $1</span>')
+  .replace(/^&lt;([a-z_]+)&gt;$/gm,'<span class="tag">&lt;$1&gt;</span>')
+  .replace(/^&lt;\/([a-z_]+)&gt;$/gm,'<span class="tag">&lt;/$1&gt;</span>')
+  .replace(/(\[INSERT[^\]]*\]|\{\{[^}]+\}\})/g,'<span class="vr">$1</span>');}
+function lenState(eff){
+  const budget=BUDGET[S.target]||4000;const pct=eff.length/budget;
+  let st="ok";if(pct>1)st="bad";else if(pct>0.6)st="warn";
+  return {pct:Math.min(pct,1.3),st,budget};
+}
+function render(updVars=true){
+  const d=L();
+  $("modeTag").textContent = S.mode==="raw"?d.modeRaw:d.modeBuild;
+  $("builderBtn").classList.toggle("hide",S.mode!=="raw");
+  // output box vs raw editor
+  const eff=effectivePrompt();
+  if(S.mode==="raw"){
+    $("outBox").classList.add("hide");$("rawEdit").classList.remove("hide");
+    if($("rawEdit").value!==S.rawText)$("rawEdit").value=S.rawText;
+  }else{
+    $("rawEdit").classList.add("hide");$("outBox").classList.remove("hide");
+    const has=S.task.trim()||S.goal.trim()||S.roleIdx>0||S.roleCustom;
+    $("outBox").innerHTML=has?highlight(eff):`<span class="empty">${d.emptyMsg}</span>`;
+  }
+  $("hint").textContent=d.hints[S.target]||"";
+  // length
+  const ls=lenState(eff);
+  $("lenLabel").textContent=d.lenLabel;
+  $("lenCount").textContent=eff.length+" / "+ls.budget;
+  const fill=$("lenFill");fill.style.width=Math.round(ls.pct*100)+"%";
+  fill.style.background=ls.st==="bad"?"var(--bad)":ls.st==="warn"?"var(--warn)":"var(--ok)";
+  const adv=$("lenAdvice");adv.textContent=d.lenAdv[ls.st];adv.className="lenadvice"+(ls.st==="warn"?" warn":ls.st==="bad"?" bad":"");
+  // quality
+  const checks=[S.task.trim(),S.goal.trim(),S.ctx.trim(),S.avoid.trim(),(S.aud.trim()||S.roleIdx>0||S.roleCustom.trim())];
+  const score=checks.filter(Boolean).length;
+  $("qDots").innerHTML=checks.map((c,i)=>`<div class="qdot${c?" on":""}"></div>`).join("");
+  $("qTxt").textContent=d.qTxt(score);
+  if(updVars)renderVars();
+}
+
+/* ====== UI BUILD ====== */
+function renderTargets(){const el=$("targets");el.innerHTML="";
+  TARGETS.forEach(t=>{const b=document.createElement("button");b.className="tgt"+(S.target===t.k?" on":"");
+    b.innerHTML=`<span class="ic">${t.ic}</span> ${t[S.uiLang]}`;
+    b.onclick=()=>{S.target=t.k;renderTargets();applyVisibility();renderFollow();render();};el.appendChild(b);});}
+function chipGroupIdx(id,items,key){const el=$(id);el.innerHTML="";
+  items.forEach((v,i)=>{const b=document.createElement("button");b.className="chip"+(S[key]===i?" on":"");b.textContent=v;
+    b.onclick=()=>{S[key]=i;if(key==="roleIdx"&&i>0){$("roleCustom").value="";S.roleCustom="";}
+      [...el.children].forEach(c=>c.classList.remove("on"));b.classList.add("on");render();};el.appendChild(b);});}
+function buildToggles(){const el=$("toggles");el.innerHTML="";
+  L().tech.forEach(t=>{const d=document.createElement("div");d.className="tg"+(S.tech[t.k]?" on":"");d.dataset.k=t.k;
+    d.innerHTML=`<div><div class="lab">${t.lab}</div><div class="desc">${t.desc}</div></div><div class="sw"></div>`;
+    d.onclick=()=>{S.tech[t.k]=!S.tech[t.k];d.classList.toggle("on",S.tech[t.k]);render();};el.appendChild(d);});}
+function applyTexts(){const d=L();
+  $("kicker").textContent=d.kicker;$("title").innerHTML=d.title;$("uiCap").textContent=d.uiCap;$("outCap").textContent=d.outCap;$("tgtLabel").textContent=d.tgtLabel;
+  $("h1lab").textContent=d.h1;$("h2lab").textContent=d.h2;$("h3lab").textContent=d.h3;$("h4lab").textContent=d.h4;
+  $("taskLab").innerHTML=d.taskLab;$("goalLab").innerHTML=d.goalLab;$("ctxLab").innerHTML=d.ctxLab;$("audLab").innerHTML=d.audLab;$("notesLab").innerHTML=d.notesLab;
+  $("roleCustomLab").textContent=d.roleCustomLab;$("fmtLab").textContent=d.fmtLab;$("toneLab").textContent=d.toneLab;$("lenLab").textContent=d.lenLab;$("avoidLab").innerHTML=d.avoidLab;
+  $("outTitle").textContent=d.outTitle;$("copyBtn").textContent=d.copy;$("saveBtn").textContent=d.save;$("builderBtn").textContent=d.builder;
+  $("tabFollow").textContent=d.tabFollow;$("tabLib").textContent=d.tabLib;$("tabSaved").textContent=d.tabSaved;
+  $("task").placeholder=d.taskPH;$("goal").placeholder=d.goalPH;$("ctx").placeholder=d.ctxPH;$("aud").placeholder=d.audPH;$("notes").placeholder=d.notesPH;$("roleCustom").placeholder=d.roleCustomPH;$("avoid").placeholder=d.avoidPH;
+  $("storeNote").textContent=HS.has?d.storeYes:d.storeNo;
+  $("followHint").textContent=d.followHead;attachInfo();}
+function applyVisibility(){const t=S.target;
+  document.querySelector(".section-role").classList.toggle("hide",(t==="perplexity"||t==="image"||t==="duvo"));
+  document.querySelector(".section-style").classList.toggle("hide",(t==="image"||t==="duvo"||t==="perplexity"));}
+
+/* ====== FOLLOW-UPS ====== */
+function renderFollow(){const d=L();const el=$("followChips");el.innerHTML="";
+  let keys=["double","short","split","cont","tableonly","stricter"];
+  // emphasize relevant for embedded/data
+  keys.forEach(k=>{const b=document.createElement("span");b.className="fchip";b.textContent=d.fuLab[k];
+    b.onclick=async()=>{const txt=d.fu[k];try{await navigator.clipboard.writeText(txt);}catch(e){}toast(d.toast);};
+    el.appendChild(b);});}
+
+/* ====== LIBRARY ====== */
+function renderLib(){const el=$("libList");el.innerHTML="";
+  LIB.forEach((it,idx)=>{const tgt=TARGETS.find(t=>t.k===it.target);
+    const d=document.createElement("div");d.className="libitem";
+    d.innerHTML=`<div class="ln"></div><div class="ls"><span>${it.cat}</span><span>${tgt?tgt[S.uiLang]:""}</span><span>${it.body.length} ${L().uiLang==="en"?"chars":"zn."}</span></div>`;
+    d.querySelector(".ln").textContent=it.name[S.uiLang];
+    d.onclick=()=>loadLib(idx);el.appendChild(d);});}
+function loadLib(idx){const it=LIB[idx];S.mode="raw";S.rawText=it.body;S.target=it.target;S.outLang="en";
+  $("outEN").classList.add("on");$("outCS").classList.remove("on");
+  S.notes=it.name[S.uiLang];$("notes").value=S.notes;S.vars={};
+  renderTargets();applyVisibility();renderFollow();switchTab("follow");render();toast(L().uiLang==="en"?"Template loaded":"Šablona načtena");}
+
+/* ====== HISTORY ====== */
+function snapshot(){return JSON.parse(JSON.stringify({target:S.target,outLang:S.outLang,mode:S.mode,rawText:S.rawText,
+  task:S.task,goal:S.goal,ctx:S.ctx,aud:S.aud,notes:S.notes,roleIdx:S.roleIdx,roleCustom:S.roleCustom,
+  format:S.format,tone:S.tone,length:S.length,avoid:S.avoid,tech:S.tech,vars:S.vars}));}
+function restore(st){Object.assign(S,st);
+  ["task","goal","ctx","aud","notes","avoid","roleCustom"].forEach(k=>{if($(k))$(k).value=S[k]||"";});
+  $("rawEdit").value=S.rawText||"";
+  $("outCS").classList.toggle("on",S.outLang==="cs");$("outEN").classList.toggle("on",S.outLang==="en");
+  renderTargets();applyVisibility();renderFollow();
+  chipGroupIdx("roles",L().roles,"roleIdx");chipGroupIdx("formats",L().formats,"format");chipGroupIdx("tones",L().tones,"tone");chipGroupIdx("lengths",L().lengths,"length");
+  document.querySelectorAll(".tg").forEach(x=>x.classList.toggle("on",S.tech[x.dataset.k]));
+  render();}
+async function persist(){await storeSave(HISTORY);renderHistory();}
+function renderHistory(){const el=$("histList");el.innerHTML="";
+  if(!HISTORY.length){el.innerHTML=`<div class="hempty">${L().histEmpty}</div>`;return;}
+  HISTORY.slice().reverse().forEach(h=>{const tgt=TARGETS.find(t=>t.k===h.state.target);
+    const d=document.createElement("div");d.className="hitem";
+    d.innerHTML=`<div class="hmain"><div class="hname"></div><div class="hsub">${(tgt?tgt[S.uiLang]:"")} · ${(h.state.outLang||"").toUpperCase()} · ${new Date(h.ts).toLocaleDateString()}</div></div>
+      <button class="hbtn dup">⧉</button><button class="hbtn ren">✎</button><button class="hbtn del">✕</button>`;
+    d.querySelector(".hname").textContent=h.name;
+    d.querySelector(".hmain").onclick=()=>restore(JSON.parse(JSON.stringify(h.state)));
+    d.querySelector(".dup").onclick=(e)=>{e.stopPropagation();HISTORY.push({id:Date.now()+"_"+Math.random().toString(36).slice(2,6),name:h.name+(L().uiLang==="en"?" (copy)":" (kopie)"),ts:Date.now(),state:JSON.parse(JSON.stringify(h.state))});persist();toast(L().savedToast);};
+    d.querySelector(".ren").onclick=(e)=>{e.stopPropagation();const n=prompt(L().renamePrompt,h.name);if(n){h.name=n;persist();}};
+    d.querySelector(".del").onclick=(e)=>{e.stopPropagation();if(confirm(L().confirmDel)){HISTORY=HISTORY.filter(x=>x.id!==h.id);persist();}};
+    el.appendChild(d);});}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1400);}
+
+/* ====== TABS ====== */
+function switchTab(name){const map={follow:"paneFollow",library:"paneLib",saved:"paneSaved"};
+  Object.keys(map).forEach(n=>{$(map[n]).classList.toggle("hide",n!==name);});
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.tab===name));}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
+
+/* ====== LANG ====== */
+function setUI(l){S.uiLang=l;$("uiCS").classList.toggle("on",l==="cs");$("uiEN").classList.toggle("on",l==="en");
+  applyTexts();renderTargets();renderFollow();renderLib();
+  chipGroupIdx("roles",L().roles,"roleIdx");chipGroupIdx("formats",L().formats,"format");chipGroupIdx("tones",L().tones,"tone");chipGroupIdx("lengths",L().lengths,"length");
+  buildToggles();renderHistory();render();}
+function setOut(l){S.outLang=l;$("outCS").classList.toggle("on",l==="cs");$("outEN").classList.toggle("on",l==="en");render();}
+
+/* ====== WIRE ====== */
+["task","goal","ctx","aud","notes","avoid"].forEach(k=>{$(k).addEventListener("input",e=>{S[k]=e.target.value;render();});});
+$("roleCustom").addEventListener("input",e=>{S.roleCustom=e.target.value;if(e.target.value){S.roleIdx=0;[...$("roles").children].forEach(c=>c.classList.remove("on"));$("roles").children[0]&&$("roles").children[0].classList.add("on");}render();});
+$("rawEdit").addEventListener("input",e=>{S.rawText=e.target.value;render();});
+$("builderBtn").addEventListener("click",()=>{S.mode="build";render();});
+$("copyBtn").addEventListener("click",async()=>{const p=effectivePrompt();
+  try{await navigator.clipboard.writeText(p);}catch(e){const ta=document.createElement("textarea");ta.value=p;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();}toast(L().toast);});
+$("saveBtn").addEventListener("click",()=>{const name=(S.notes.trim()||S.task.trim()||S.rawText.trim()||"Prompt").slice(0,48);
+  HISTORY.push({id:Date.now()+"_"+Math.random().toString(36).slice(2,6),name,ts:Date.now(),state:snapshot()});persist();toast(L().savedToast);});
+$("exportBtn").addEventListener("click",()=>{const blob=new Blob([JSON.stringify(HISTORY,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="prompt-engineer-history.json";a.click();URL.revokeObjectURL(a.href);});
+$("importBtn").addEventListener("click",()=>$("fileIn").click());
+$("fileIn").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const arr=JSON.parse(r.result);if(Array.isArray(arr)){const ids=new Set(HISTORY.map(x=>x.id));arr.forEach(x=>{if(!ids.has(x.id))HISTORY.push(x);});persist();}}catch(err){alert(L().importErr);}};r.readAsText(f);e.target.value="";});
+
+/* ====== INIT ====== */
+(async function(){applyTexts();renderTargets();applyVisibility();
+  chipGroupIdx("roles",L().roles,"roleIdx");chipGroupIdx("formats",L().formats,"format");chipGroupIdx("tones",L().tones,"tone");chipGroupIdx("lengths",L().lengths,"length");
+  buildToggles();renderFollow();renderLib();
+  HISTORY=await storeLoad();renderHistory();render();})();
+</script>
