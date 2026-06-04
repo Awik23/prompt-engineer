@@ -420,7 +420,7 @@ function addIcon(id,key){const el=$(id);if(!el||!(INFO[S.uiLang]&&INFO[S.uiLang]
   b.onclick=(e)=>{e.stopPropagation();e.preventDefault();if(ipopKey===key)hidePop();else showPop(key,b);};el.appendChild(b);}
 function attachInfo(){[["h1lab","core"],["h2lab","role"],["h3lab","style"],["h4lab","tech"],
   ["taskLab","task"],["goalLab","goal"],["ctxLab","ctx"],["audLab","aud"],["notesLab","notes"],
-  ["roleCustomLab","rolecustom"],["avoidLab","avoid"],["tgtLabel","target"],["outCap","outlang"]].forEach(([id,k])=>addIcon(id,k));}
+  ["roleCustomLab","rolecustom"],["avoidLab","avoid"],["approachLab","approach"],["tgtLabel","target"],["outCap","outlang"]].forEach(([id,k])=>addIcon(id,k));}
 
 /* ====== LIBRARY (real Rohlik Ads prompts + generic) ====== */
 const LIB=[
@@ -456,7 +456,8 @@ function val(x,fb){return (x&&x.trim())?x.trim():fb;}
 
 /* ====== BUILDERS ====== */
 function sec(tag,body,mode){if(mode==="xml"){const x=tag.toLowerCase().replace(/[^a-z]/g,"_");return `<${x}>\n${body}\n</${x}>`;}return `# ${tag}\n${body}`;}
-function techLines(){const d=OL(),o=[];["cot","steps","ground","uncertainty","critique"].forEach(k=>{if(S.tech[k])o.push("- "+d.techS[k]);});return o;}
+function techLines(){const d=OL(),o=[];["cot","steps","nohall","ground","uncertainty","critique"].forEach(k=>{if(S.tech[k])o.push("- "+d.techS[k]);});return o;}
+function approachLine(){return OL().approachSent[S.creativity]||"";}
 function roleName(){if(S.roleCustom.trim())return S.roleCustom.trim();return S.roleIdx>0?OL().roles[S.roleIdx]:"";}
 function buildStandard(mode){const d=OL(),H=d.H,b=[];const role=roleName();
   if(role)b.push(sec(H.ROLE,d.roleSent(role),mode));
@@ -465,7 +466,7 @@ function buildStandard(mode){const d=OL(),H=d.H,b=[];const role=roleName();
   if(S.ctx.trim())b.push(sec(H.CONTEXT,S.ctx.trim(),mode));
   if(S.aud.trim())b.push(sec(H.AUDIENCE,d.audSent(S.aud.trim()),mode));
   b.push(sec(H.FORMAT,`- ${d.fmt[S.format]}\n- ${H.TONE}: ${d.tones[S.tone]}.\n- ${d.len[S.length]}\n- ${d.respond}`,mode));
-  const tl=techLines();if(tl.length)b.push(sec(H.GUIDE,tl.join("\n"),mode));
+  const tl=techLines();const ap=approachLine();if(ap)tl.push("- "+ap);if(tl.length)b.push(sec(H.GUIDE,tl.join("\n"),mode));
   if(S.avoid.trim())b.push(sec(H.AVOID,S.avoid.trim(),mode));
   if(S.tech.example)b.push(sec(H.EXAMPLE,(S.outLang==="cs"?"Vstup: [ukázkový vstup]\nKýžený výstup: [ukázkový výstup]":"Input: [sample input]\nDesired output: [sample output]"),mode));
   return b.join("\n\n");}
@@ -476,6 +477,8 @@ function buildPerplexity(){const d=OL(),H=d.H,cs=S.outLang==="cs",b=[];
   const f=[];if(S.tech.ground)f.push(cs?"jen ověřitelná fakta s odkazy":"only verifiable facts with links");
   if(S.tech.uncertainty)f.push(cs?"označ, kde si zdroje protiřečí":"flag where sources disagree");
   f.push(cs?"nejnovější dostupné údaje":"the most recent data available");
+  if(S.tech.nohall)f.push(cs?"nevymýšlej fakta/čísla/citace; co nejde ověřit, označ jako nejisté":"don't invent facts/numbers/citations; flag unverifiable items as uncertain");
+  const apx=approachLine();if(apx)f.push(apx);
   b.push(`# ${H.FOCUS}\n- ${f.join("\n- ")}`);
   b.push(`# ${H.SOURCES}\n${cs?"primární zdroje před agregátory":"primary sources over aggregators"}`);
   if(S.avoid.trim())b.push(`# ${H.AVOID}\n${S.avoid.trim()}`);
@@ -487,6 +490,7 @@ function buildImage(){const cs=S.outLang==="cs",b=[];
   b.push(cs?"Styl: [fotorealistické / ilustrace / 3D / akvarel]":"Style: [photorealistic / illustration / 3D / watercolor]");
   b.push(cs?"Kompozice & světlo: [úhel, záběr, osvětlení]":"Composition & light: [angle, shot, lighting]");
   b.push("Parameters: --ar 16:9 --q 2");
+  {const apx=approachLine();if(apx)b.push((cs?"Přístup: ":"Approach: ")+apx);}
   if(S.avoid.trim())b.push((cs?"Negative prompt: ":"Negative prompt: ")+S.avoid.trim());
   return b.join("\n");}
 function buildSlides(){const d=OL(),H=d.H,cs=S.outLang==="cs",b=[];
@@ -498,6 +502,7 @@ function buildSlides(){const d=OL(),H=d.H,cs=S.outLang==="cs",b=[];
   b.push(`# ${H.VISUAL}\n${cs?"[barvy / brand / nálada]":"[colors / brand / mood]"}`);
   b.push(`# ${H.KEY}\n${S.ctx.trim()||(cs?"[hlavní body, jeden na slide]":"[key points, one per slide]")}`);
   if(S.avoid.trim())b.push(`# ${H.AVOID}\n${S.avoid.trim()}`);
+  {const gl=[];const apx=approachLine();if(apx)gl.push("- "+apx);if(S.tech.nohall)gl.push("- "+d.techS.nohall);if(gl.length)b.push(`# ${H.GUIDE}\n${gl.join("\n")}`);}
   b.push(`# ${H.LANG}\n${d.respond}`);return b.join("\n\n");}
 function buildDuvo(){const d=OL(),H=d.H,cs=S.outLang==="cs",b=[];
   b.push(`# ${H.GOAL}\n${val(S.goal,cs?"[jaký výsledek má agent doručit]":"[the outcome the agent should deliver]")}`);
@@ -505,7 +510,7 @@ function buildDuvo(){const d=OL(),H=d.H,cs=S.outLang==="cs",b=[];
   b.push(`# ${H.TRIGGER}\n${cs?"[kdy spustit — událost, čas, e-mail/soubor]":"[when it runs — event, schedule, email/file]"}`);
   b.push(`# ${H.INPUTS}\n${S.ctx.trim()||(cs?"[systémy: portály, e-maily, tabulky, ERP]":"[systems: portals, emails, sheets, ERP]")}`);
   b.push(`# ${H.STEPS}\n1. [${cs?"krok":"step"}]\n2. [${cs?"krok":"step"}]\n3. [${cs?"krok":"step"}]`);
-  const r=[];if(S.tech.ground)r.push(cs?"rozhoduj jen podle dat z propojených systémů":"decide only from connected-system data");
+  const r=[];if(S.tech.ground||S.tech.nohall)r.push(cs?"rozhoduj jen podle dat z propojených systémů, nic nevymýšlej":"decide only from connected-system data, invent nothing");
   r.push(cs?"[pravidlo: pokud X, pak Y]":"[rule: if X then Y]");
   b.push(`# ${H.RULES}\n- ${r.join("\n- ")}`);
   b.push(`# ${H.GUARD}\n- ${cs?"eskaluj na člověka při: [nejednoznačnost / částka nad limit / chybí data]":"escalate to a human on: [ambiguity / amount over limit / missing data]"}`);
@@ -584,7 +589,10 @@ function render(updVars=true){
 function renderTargets(){const el=$("targets");el.innerHTML="";
   TARGETS.forEach(t=>{const b=document.createElement("button");b.className="tgt"+(S.target===t.k?" on":"");
     b.innerHTML=`<span class="ic">${t.ic}</span> ${t[S.uiLang]}`;
-    b.onclick=()=>{S.target=t.k;renderTargets();applyVisibility();renderFollow();render();};el.appendChild(b);});}
+    b.onclick=()=>{S.target=t.k;
+      if(t.k==="perplexity"||t.k==="embedded"){S.creativity=0;S.tech.nohall=true;}
+      renderTargets();applyVisibility();renderFollow();
+      chipGroupIdx("approach",L().approaches,"creativity");buildToggles();render();};el.appendChild(b);});}
 function chipGroupIdx(id,items,key){const el=$(id);el.innerHTML="";
   items.forEach((v,i)=>{const b=document.createElement("button");b.className="chip"+(S[key]===i?" on":"");b.textContent=v;
     b.onclick=()=>{S[key]=i;if(key==="roleIdx"&&i>0){$("roleCustom").value="";S.roleCustom="";}
@@ -597,7 +605,7 @@ function applyTexts(){const d=L();
   $("kicker").textContent=d.kicker;$("title").innerHTML=d.title;$("uiCap").textContent=d.uiCap;$("outCap").textContent=d.outCap;$("tgtLabel").textContent=d.tgtLabel;
   $("h1lab").textContent=d.h1;$("h2lab").textContent=d.h2;$("h3lab").textContent=d.h3;$("h4lab").textContent=d.h4;
   $("taskLab").innerHTML=d.taskLab;$("goalLab").innerHTML=d.goalLab;$("ctxLab").innerHTML=d.ctxLab;$("audLab").innerHTML=d.audLab;$("notesLab").innerHTML=d.notesLab;
-  $("roleCustomLab").textContent=d.roleCustomLab;$("fmtLab").textContent=d.fmtLab;$("toneLab").textContent=d.toneLab;$("lenLab").textContent=d.lenLab;$("avoidLab").innerHTML=d.avoidLab;
+  $("roleCustomLab").textContent=d.roleCustomLab;$("fmtLab").textContent=d.fmtLab;$("toneLab").textContent=d.toneLab;$("lenLab").textContent=d.lenLab;$("avoidLab").innerHTML=d.avoidLab;$("approachLab").textContent=d.approachLab;
   $("outTitle").textContent=d.outTitle;$("copyBtn").textContent=d.copy;$("saveBtn").textContent=d.save;$("builderBtn").textContent=d.builder;
   $("tabFollow").textContent=d.tabFollow;$("tabLib").textContent=d.tabLib;$("tabSaved").textContent=d.tabSaved;
   $("task").placeholder=d.taskPH;$("goal").placeholder=d.goalPH;$("ctx").placeholder=d.ctxPH;$("aud").placeholder=d.audPH;$("notes").placeholder=d.notesPH;$("roleCustom").placeholder=d.roleCustomPH;$("avoid").placeholder=d.avoidPH;
@@ -630,13 +638,13 @@ function loadLib(idx){const it=LIB[idx];S.mode="raw";S.rawText=it.body;S.target=
 /* ====== HISTORY ====== */
 function snapshot(){return JSON.parse(JSON.stringify({target:S.target,outLang:S.outLang,mode:S.mode,rawText:S.rawText,
   task:S.task,goal:S.goal,ctx:S.ctx,aud:S.aud,notes:S.notes,roleIdx:S.roleIdx,roleCustom:S.roleCustom,
-  format:S.format,tone:S.tone,length:S.length,avoid:S.avoid,tech:S.tech,vars:S.vars}));}
+  format:S.format,tone:S.tone,length:S.length,avoid:S.avoid,creativity:S.creativity,tech:S.tech,vars:S.vars}));}
 function restore(st){Object.assign(S,st);
   ["task","goal","ctx","aud","notes","avoid","roleCustom"].forEach(k=>{if($(k))$(k).value=S[k]||"";});
   $("rawEdit").value=S.rawText||"";
   $("outCS").classList.toggle("on",S.outLang==="cs");$("outEN").classList.toggle("on",S.outLang==="en");
   renderTargets();applyVisibility();renderFollow();
-  chipGroupIdx("roles",L().roles,"roleIdx");chipGroupIdx("formats",L().formats,"format");chipGroupIdx("tones",L().tones,"tone");chipGroupIdx("lengths",L().lengths,"length");
+  chipGroupIdx("roles",L().roles,"roleIdx");chipGroupIdx("formats",L().formats,"format");chipGroupIdx("tones",L().tones,"tone");chipGroupIdx("lengths",L().lengths,"length");chipGroupIdx("approach",L().approaches,"creativity");
   document.querySelectorAll(".tg").forEach(x=>x.classList.toggle("on",S.tech[x.dataset.k]));
   render();}
 async function persist(){await storeSave(HISTORY);renderHistory();}
@@ -663,7 +671,7 @@ document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>switchTab(t.dataset.t
 /* ====== LANG ====== */
 function setUI(l){S.uiLang=l;$("uiCS").classList.toggle("on",l==="cs");$("uiEN").classList.toggle("on",l==="en");
   applyTexts();renderTargets();renderFollow();renderLib();
-  chipGroupIdx("roles",L().roles,"roleIdx");chipGroupIdx("formats",L().formats,"format");chipGroupIdx("tones",L().tones,"tone");chipGroupIdx("lengths",L().lengths,"length");
+  chipGroupIdx("roles",L().roles,"roleIdx");chipGroupIdx("formats",L().formats,"format");chipGroupIdx("tones",L().tones,"tone");chipGroupIdx("lengths",L().lengths,"length");chipGroupIdx("approach",L().approaches,"creativity");
   buildToggles();renderHistory();render();}
 function setOut(l){S.outLang=l;$("outCS").classList.toggle("on",l==="cs");$("outEN").classList.toggle("on",l==="en");render();}
 
@@ -686,12 +694,16 @@ $("fileIn").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return
 const FAQ={
  cs:`<button class="modalclose" id="faqClose">Zavřít ✕</button>
   <h2>Co je Prompt Engineer</h2>
+  <div class="faqq">Co je nového (changelog)</div>
+  <div class="faqa"><b>v1.1</b> — přidána sekce <b>Přístup / kreativita</b> (4 režimy) a přepínač <b>Nulová tolerance halucinací</b>; FAQ s changelogem.<br><b>v1.0</b> — knihovna Rohlik Ads promptů, proměnné, měřič délky, follow-upy, CZ/EN výstup, ⓘ nápovědy, uložené prompty.</div>
   <p class="lead">Nástroj, který ti pomůže napsat <b>kvalitní, strukturovaný prompt</b>. Vyplníš pole, on z nich složí prompt, ty ho zkopíruješ a vložíš do skutečného AI nástroje (Claude, ChatGPT, Perplexity, Rohlik Ads Assistant…).</p>
   <div class="faqq">Co to NENÍ</div>
   <div class="faqa">Není to AI. <b>Nepřemýšlí, neodpovídá, nečte odkazy ani přiložené soubory a nic nikam neodesílá.</b> Jen skládá text. Odpověď ti dá až ten nástroj, kam prompt vložíš.</div>
   <div class="faqq">Jak ho používat</div>
   <div class="faqa">1) Nahoře vyber <b>cílový nástroj</b> (mění formát i limit délky). 2) Vlevo vyplň pole — <b>Úkol</b> je povinný, <b>Cíl/Kontext</b> výrazně pomůžou. 3) Vpravo se prompt skládá <b>sám, živě</b>. 4) <b>Kopírovat</b> → vlož do nástroje. U každého pole je <b>ⓘ</b> s vysvětlením.</div>
   <div class="faqa"><b>Knihovna</b> = hotové šablony (vč. Rohlik Ads). <b>Proměnné</b> = doplň hodnoty do míst [INSERT…] (datumy, firmy, kampaně) — dosadí se při kopírování. <b>Follow-up</b> = hotové věty, které vložíš PO odpovědi nástroje (ověř čísla, zkrať, rozděl na kroky…).</div>
+  <div class="faqq">Přístup / kreativita a halucinace</div>
+  <div class="faqa"><b>Přístup</b> má 4 režimy: Faktické (data, čísla — Rohlik Ads), Vyvážené, Kreativní, Brainstorming (nápady, obsah). U datových úkolů vol Faktické. Přepínač <b>Nulová tolerance halucinací</b> přidá silnou instrukci: jen ověřená fakta, žádné vymyšlené údaje/zdroje, nejisté výslovně označit. <b>Pozor:</b> ani to nezaručí nulu halucinací na 100 % — výrazně je omezí, ale u kritických čísel si je vždy ověř.</div>
   <div class="faqq">Jak ho NEpoužívat</div>
   <div class="faqa">Nečekej, že přečte přiložený dokument nebo odkaz — to umí až cílový nástroj. Negeneruje odpověď, jen prompt. Není to chat.</div>
   <div class="faqq">Ukládání — důležité</div>
@@ -704,12 +716,16 @@ const FAQ={
   <div class="faqa">Nástroj žije na jedné adrese; když přijde nová verze, <b>aktualizuje se sama</b> (kdyby svítila stará, dej <b>Ctrl+F5</b>). Připomínky a nápady posílej do určeného Teams vlákna.</div>`,
  en:`<button class="modalclose" id="faqClose">Close ✕</button>
   <h2>What Prompt Engineer is</h2>
+  <div class="faqq">What's new (changelog)</div>
+  <div class="faqa"><b>v1.1</b> — added <b>Approach / creativity</b> (4 modes) and a <b>Zero hallucination</b> toggle; FAQ with changelog.<br><b>v1.0</b> — Rohlik Ads prompt library, variables, length meter, follow-ups, CZ/EN output, ⓘ help, saved prompts.</div>
   <p class="lead">A tool that helps you write a <b>high-quality, structured prompt</b>. You fill in fields, it assembles the prompt, you copy it and paste it into the real AI tool (Claude, ChatGPT, Perplexity, Rohlik Ads Assistant…).</p>
   <div class="faqq">What it is NOT</div>
   <div class="faqa">It is not an AI. <b>It doesn't think, answer, read links or attached files, and sends nothing anywhere.</b> It only assembles text. The answer comes from the tool you paste the prompt into.</div>
   <div class="faqq">How to use it</div>
   <div class="faqa">1) Pick the <b>target tool</b> at the top (changes format and length limit). 2) Fill the fields on the left — <b>Task</b> is required, <b>Goal/Context</b> help a lot. 3) The prompt assembles <b>live</b> on the right. 4) <b>Copy</b> → paste into the tool. Every field has an <b>ⓘ</b> with an explanation.</div>
   <div class="faqa"><b>Library</b> = ready templates (incl. Rohlik Ads). <b>Variables</b> = fill the [INSERT…] slots (dates, companies, campaigns) — substituted on copy. <b>Follow-up</b> = ready lines to paste AFTER the tool replies (double-check, shorten, split into steps…).</div>
+  <div class="faqq">Approach / creativity & hallucinations</div>
+  <div class="faqa"><b>Approach</b> has 4 modes: Factual (data, numbers — Rohlik Ads), Balanced, Creative, Brainstorming (ideas, content). For data tasks pick Factual. The <b>Zero hallucination</b> toggle adds a strong instruction: only verified facts, no invented data/sources, flag anything uncertain. <b>Note:</b> even this won't guarantee zero hallucinations — it strongly reduces them, but always verify critical numbers.</div>
   <div class="faqq">How NOT to use it</div>
   <div class="faqa">Don't expect it to read an attached document or link — only the target tool can. It doesn't generate an answer, only a prompt. It's not a chat.</div>
   <div class="faqq">Saving — important</div>
@@ -729,7 +745,7 @@ $("faqOverlay").addEventListener("click",e=>{if(e.target.id==="faqOverlay")close
 
 /* ====== INIT ====== */
 (async function(){applyTexts();renderTargets();applyVisibility();
-  chipGroupIdx("roles",L().roles,"roleIdx");chipGroupIdx("formats",L().formats,"format");chipGroupIdx("tones",L().tones,"tone");chipGroupIdx("lengths",L().lengths,"length");
+  chipGroupIdx("roles",L().roles,"roleIdx");chipGroupIdx("formats",L().formats,"format");chipGroupIdx("tones",L().tones,"tone");chipGroupIdx("lengths",L().lengths,"length");chipGroupIdx("approach",L().approaches,"creativity");
   buildToggles();renderFollow();renderLib();
   HISTORY=await storeLoad();renderHistory();render();})();
 </script>
